@@ -6,8 +6,6 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 const { read, write, nextId, nowISO, seedIfNeeded } = require('./store');
 
-seedIfNeeded();
-
 const app = express();
 const PORT = process.env.PORT || 8090;
 const JWT_SECRET = process.env.JWT_SECRET || 'change_me_secret';
@@ -86,7 +84,6 @@ function createCaptcha() {
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="80" viewBox="0 0 240 80"><rect width="240" height="80" rx="12" fill="#e5c6cf"/>${lines}${dots}${letters}</svg>`;
   const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
-
   const token = Buffer.from(`${code}:${Date.now() + 2 * 60 * 1000}`).toString('base64');
   return { code, token, image };
 }
@@ -157,52 +154,47 @@ async function sendSmsOtp(phone, code) {
   return { ok: r.ok, text: (text || '').slice(0, 500) };
 }
 
-app.get('/api/branches', (_req, res) => {
-  const data = read();
-  res.json({ branches: data.branches.filter(b => b.active === 1).sort((a, b) => a.name.localeCompare(b.name)) });
+app.get('/api/branches', async (_req, res) => {
+  const data = await read();
+  res.json({ branches: data.branches.filter(b => Number(b.active) === 1).sort((a, b) => a.name.localeCompare(b.name)) });
 });
 
-app.get('/api/companies', (_req, res) => {
-  const data = read();
-  res.json({ companies: data.remittance_companies.filter(c => c.active === 1).sort((a, b) => a.name.localeCompare(b.name)) });
+app.get('/api/companies', async (_req, res) => {
+  const data = await read();
+  res.json({ companies: data.remittance_companies.filter(c => Number(c.active) === 1).sort((a, b) => a.name.localeCompare(b.name)) });
 });
 
-app.get('/api/business-days', (req, res) => {
+app.get('/api/business-days', async (req, res) => {
   const branchId = Number(req.query.branch_id);
   if (!branchId) return res.status(400).json({ error: 'branch_id required' });
-  const data = read();
-  res.json({ days: data.business_days.filter(d => d.branch_id === branchId && d.active === 1) });
+  const data = await read();
+  res.json({ days: data.business_days.filter(d => Number(d.branch_id) === branchId && Number(d.active) === 1) });
 });
 
-app.get('/api/slots', (req, res) => {
+app.get('/api/slots', async (req, res) => {
   const branchId = Number(req.query.branch_id);
   const dayName = String(req.query.day_name || '');
   if (!branchId || !dayName) return res.status(400).json({ error: 'branch_id/day_name required' });
-  const data = read();
-  const day = data.business_days.find(d => d.branch_id === branchId && d.day_name === dayName && d.active === 1);
+  const data = await read();
+  const day = data.business_days.find(d => Number(d.branch_id) === branchId && d.day_name === dayName && Number(d.active) === 1);
   if (!day) return res.status(404).json({ error: 'Day config not found' });
 
   const allSlots = makeSlots(day.start_time, day.end_time, day.interval_minutes || 60);
-  const booked = data.appointments.filter(a => a.branch_id === branchId && a.day_name === dayName && a.status === 'booked').map(a => a.slot_time);
+  const booked = data.appointments.filter(a => Number(a.branch_id) === branchId && a.day_name === dayName && a.status === 'booked').map(a => a.slot_time);
   const slots = allSlots.map(t => ({ time: t, available: !booked.includes(t) }));
   res.json({ slots, day });
 });
 
 app.get('/api/captcha', (_req, res) => {
   const c = createCaptcha();
-  res.json({
-    image: c.image,
-    challenge: c.code.split('').join(' '),
-    token: c.token,
-    hint: 'ادخل الرموز في الصورة'
-  });
+  res.json({ image: c.image, challenge: c.code.split('').join(' '), token: c.token, hint: 'ادخل الرموز في الصورة' });
 });
 
 app.post('/api/send-otp', async (req, res) => {
   const { phone, transfer_number, captcha_answer, captcha_token } = req.body || {};
   if (!phone || !transfer_number || !captcha_answer || !captcha_token) return res.status(400).json({ error: 'Missing fields' });
 
-  const data = read();
+  const data = await read();
   const locked = ensureNotLocked(data, phone);
   if (!locked.ok) return res.status(429).json({ error: locked.message });
   if (!verifyCaptcha(captcha_answer, captcha_token)) return res.status(400).json({ error: 'Captcha failed' });
@@ -218,7 +210,7 @@ app.post('/api/send-otp', async (req, res) => {
     used: 0,
     created_at: nowISO()
   });
-  write(data);
+  await write(data);
 
   try {
     const sms = await sendSmsOtp(phone, code);
@@ -229,24 +221,24 @@ app.post('/api/send-otp', async (req, res) => {
   }
 });
 
-app.post('/api/book', (req, res) => {
+app.post('/api/book', async (req, res) => {
   const { transfer_number, branch_id, company_id, day_name, slot_time, phone, otp_code } = req.body || {};
   if (!transfer_number || !branch_id || !company_id || !day_name || !slot_time || !phone || !otp_code) return res.status(400).json({ error: 'Missing required fields' });
 
-  const data = read();
+  const data = await read();
   const locked = ensureNotLocked(data, phone);
   if (!locked.ok) return res.status(429).json({ success: false, message: 'تم قفل المحاولات مؤقتاً، حاول لاحقاً' });
 
   const otp = [...data.otp_codes].reverse().find(o => o.phone === phone && o.transfer_number === transfer_number && o.code === otp_code);
-  if (!otp || otp.used) {
+  if (!otp || Number(otp.used) === 1) {
     const t = trackVerifyFail(data, phone);
-    write(data);
+    await write(data);
     if (t.locked) return res.status(429).json({ success: false, message: 'تم قفل المحاولات مؤقتاً بسبب كثرة الإدخال الخاطئ' });
     return res.status(400).json({ success: false, message: 'رمز التحقق غير صحيح' });
   }
   if (new Date(otp.expires_at).getTime() < Date.now()) return res.status(400).json({ success: false, message: 'انتهت صلاحية رمز التحقق' });
 
-  const duplicate = data.appointments.find(a => a.branch_id === Number(branch_id) && a.day_name === day_name && a.slot_time === slot_time && a.status === 'booked');
+  const duplicate = data.appointments.find(a => Number(a.branch_id) === Number(branch_id) && a.day_name === day_name && a.slot_time === slot_time && a.status === 'booked');
   if (duplicate) return res.status(409).json({ success: false, message: 'فشل عملية الحجز يرجى اختيار وقت آخر' });
 
   data.appointments.push({
@@ -262,111 +254,118 @@ app.post('/api/book', (req, res) => {
   });
   otp.used = 1;
   resetVerifyFail(data, phone);
-  write(data);
+  await write(data);
   return res.json({ success: true, message: 'تم حجز الموعد بنجاح' });
 });
 
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', async (req, res) => {
   const { username, password } = req.body || {};
-  const data = read();
-  const user = data.dashboard_users.find(u => u.username === username && u.active === 1);
+  const data = await read();
+  const user = data.dashboard_users.find(u => u.username === username && Number(u.active) === 1);
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   if (!bcrypt.compareSync(password || '', user.password_hash)) return res.status(401).json({ error: 'Invalid credentials' });
   const token = jwt.sign({ id: user.id, username: user.username, role: user.role, branch_id: user.branch_id || null }, JWT_SECRET, { expiresIn: '12h' });
   res.json({ token, role: user.role, branch_id: user.branch_id || null });
 });
 
-app.get('/api/admin/appointments', auth(['admin', 'branch_employee']), (req, res) => {
+app.get('/api/admin/appointments', auth(['admin', 'branch_employee']), async (req, res) => {
   const { branch_id, day_name } = req.query;
-  const data = read();
+  const data = await read();
   let rows = data.appointments;
 
-  if (req.user.role === 'branch_employee') rows = rows.filter(a => a.branch_id === Number(req.user.branch_id));
-  else if (branch_id) rows = rows.filter(a => a.branch_id === Number(branch_id));
+  if (req.user.role === 'branch_employee') rows = rows.filter(a => Number(a.branch_id) === Number(req.user.branch_id));
+  else if (branch_id) rows = rows.filter(a => Number(a.branch_id) === Number(branch_id));
   if (day_name) rows = rows.filter(a => a.day_name === String(day_name));
 
   const out = rows.map(a => {
-    const b = data.branches.find(x => x.id === a.branch_id) || {};
-    const c = data.remittance_companies.find(x => x.id === a.company_id) || {};
+    const b = data.branches.find(x => Number(x.id) === Number(a.branch_id)) || {};
+    const c = data.remittance_companies.find(x => Number(x.id) === Number(a.company_id)) || {};
     return { ...a, branch_name: b.name || '', branch_code: b.code || '', company_name: c.name || '' };
-  }).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  }).sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
 
   res.json({ appointments: out });
 });
 
-app.delete('/api/admin/appointments/:id', auth(['admin']), (req, res) => {
-  const data = read();
-  const row = data.appointments.find(a => a.id === Number(req.params.id));
+app.delete('/api/admin/appointments/:id', auth(['admin']), async (req, res) => {
+  const data = await read();
+  const row = data.appointments.find(a => Number(a.id) === Number(req.params.id));
   if (row) row.status = 'cancelled';
-  write(data);
+  await write(data);
   res.json({ ok: true });
 });
 
-app.get('/api/admin/branches', auth(['admin']), (_req, res) => {
-  const data = read();
-  res.json({ branches: [...data.branches].sort((a, b) => b.id - a.id) });
+app.get('/api/admin/branches', auth(['admin']), async (_req, res) => {
+  const data = await read();
+  res.json({ branches: [...data.branches].sort((a, b) => Number(b.id) - Number(a.id)) });
 });
-app.post('/api/admin/branches', auth(['admin']), (req, res) => {
+
+app.post('/api/admin/branches', auth(['admin']), async (req, res) => {
   const { code, name, location } = req.body || {};
   if (!code || !name || !location) return res.status(400).json({ error: 'Missing fields' });
-  const data = read();
+  const data = await read();
   data.branches.push({ id: nextId(data, 'branches'), code, name, location, active: 1 });
-  write(data);
+  await write(data);
   res.json({ ok: true });
 });
-app.put('/api/admin/branches/:id', auth(['admin']), (req, res) => {
-  const data = read();
-  const row = data.branches.find(b => b.id === Number(req.params.id));
+
+app.put('/api/admin/branches/:id', auth(['admin']), async (req, res) => {
+  const data = await read();
+  const row = data.branches.find(b => Number(b.id) === Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Not found' });
   const { code, name, location, active } = req.body || {};
   row.code = code; row.name = name; row.location = location; row.active = Number(active ? 1 : 0);
-  write(data);
-  res.json({ ok: true });
-});
-app.delete('/api/admin/branches/:id', auth(['admin']), (req, res) => {
-  const data = read();
-  data.branches = data.branches.filter(b => b.id !== Number(req.params.id));
-  write(data);
+  await write(data);
   res.json({ ok: true });
 });
 
-app.get('/api/admin/companies', auth(['admin']), (_req, res) => {
-  const data = read();
-  res.json({ companies: [...data.remittance_companies].sort((a, b) => b.id - a.id) });
-});
-app.post('/api/admin/companies', auth(['admin']), (req, res) => {
-  const { name, description } = req.body || {};
-  if (!name) return res.status(400).json({ error: 'name required' });
-  const data = read();
-  data.remittance_companies.push({ id: nextId(data, 'remittance_companies'), name, description: description || '', active: 1 });
-  write(data);
+app.delete('/api/admin/branches/:id', auth(['admin']), async (req, res) => {
+  const data = await read();
+  data.branches = data.branches.filter(b => Number(b.id) !== Number(req.params.id));
+  await write(data);
   res.json({ ok: true });
 });
-app.put('/api/admin/companies/:id', auth(['admin']), (req, res) => {
-  const data = read();
-  const row = data.remittance_companies.find(c => c.id === Number(req.params.id));
+
+app.get('/api/admin/companies', auth(['admin']), async (_req, res) => {
+  const data = await read();
+  res.json({ companies: [...data.remittance_companies].sort((a, b) => Number(b.id) - Number(a.id)) });
+});
+
+app.post('/api/admin/companies', auth(['admin']), async (req, res) => {
+  const { name, description } = req.body || {};
+  if (!name) return res.status(400).json({ error: 'name required' });
+  const data = await read();
+  data.remittance_companies.push({ id: nextId(data, 'remittance_companies'), name, description: description || '', active: 1 });
+  await write(data);
+  res.json({ ok: true });
+});
+
+app.put('/api/admin/companies/:id', auth(['admin']), async (req, res) => {
+  const data = await read();
+  const row = data.remittance_companies.find(c => Number(c.id) === Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Not found' });
   const { name, description, active } = req.body || {};
   row.name = name; row.description = description || ''; row.active = Number(active ? 1 : 0);
-  write(data);
-  res.json({ ok: true });
-});
-app.delete('/api/admin/companies/:id', auth(['admin']), (req, res) => {
-  const data = read();
-  data.remittance_companies = data.remittance_companies.filter(c => c.id !== Number(req.params.id));
-  write(data);
+  await write(data);
   res.json({ ok: true });
 });
 
-app.get('/api/admin/business-days', auth(['admin', 'branch_employee']), (req, res) => {
-  const data = read();
-  let rows = data.business_days;
-  if (req.user.role === 'branch_employee') rows = rows.filter(d => d.branch_id === Number(req.user.branch_id));
-  else if (req.query.branch_id) rows = rows.filter(d => d.branch_id === Number(req.query.branch_id));
-  res.json({ business_days: rows.sort((a, b) => b.id - a.id) });
+app.delete('/api/admin/companies/:id', auth(['admin']), async (req, res) => {
+  const data = await read();
+  data.remittance_companies = data.remittance_companies.filter(c => Number(c.id) !== Number(req.params.id));
+  await write(data);
+  res.json({ ok: true });
 });
-app.post('/api/admin/business-days', auth(['admin', 'branch_employee']), (req, res) => {
-  const data = read();
+
+app.get('/api/admin/business-days', auth(['admin', 'branch_employee']), async (req, res) => {
+  const data = await read();
+  let rows = data.business_days;
+  if (req.user.role === 'branch_employee') rows = rows.filter(d => Number(d.branch_id) === Number(req.user.branch_id));
+  else if (req.query.branch_id) rows = rows.filter(d => Number(d.branch_id) === Number(req.query.branch_id));
+  res.json({ business_days: rows.sort((a, b) => Number(b.id) - Number(a.id)) });
+});
+
+app.post('/api/admin/business-days', auth(['admin', 'branch_employee']), async (req, res) => {
+  const data = await read();
   let { branch_id, day_name, start_time, end_time, interval_minutes, active } = req.body || {};
   if (req.user.role === 'branch_employee') branch_id = req.user.branch_id;
   data.business_days.push({
@@ -378,12 +377,13 @@ app.post('/api/admin/business-days', auth(['admin', 'branch_employee']), (req, r
     interval_minutes: Number(interval_minutes || 60),
     active: Number(active ?? 1)
   });
-  write(data);
+  await write(data);
   res.json({ ok: true });
 });
-app.put('/api/admin/business-days/:id', auth(['admin', 'branch_employee']), (req, res) => {
-  const data = read();
-  const row = data.business_days.find(d => d.id === Number(req.params.id));
+
+app.put('/api/admin/business-days/:id', auth(['admin', 'branch_employee']), async (req, res) => {
+  const data = await read();
+  const row = data.business_days.find(d => Number(d.id) === Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Not found' });
   if (req.user.role === 'branch_employee' && Number(row.branch_id) !== Number(req.user.branch_id)) return res.status(403).json({ error: 'Forbidden for other branch' });
   let { branch_id, day_name, start_time, end_time, interval_minutes, active } = req.body || {};
@@ -394,17 +394,26 @@ app.put('/api/admin/business-days/:id', auth(['admin', 'branch_employee']), (req
   row.end_time = end_time;
   row.interval_minutes = Number(interval_minutes || 60);
   row.active = Number(active ? 1 : 0);
-  write(data);
-  res.json({ ok: true });
-});
-app.delete('/api/admin/business-days/:id', auth(['admin', 'branch_employee']), (req, res) => {
-  const data = read();
-  const row = data.business_days.find(d => d.id === Number(req.params.id));
-  if (!row) return res.status(404).json({ error: 'Not found' });
-  if (req.user.role === 'branch_employee' && Number(row.branch_id) !== Number(req.user.branch_id)) return res.status(403).json({ error: 'Forbidden for other branch' });
-  data.business_days = data.business_days.filter(d => d.id !== Number(req.params.id));
-  write(data);
+  await write(data);
   res.json({ ok: true });
 });
 
-app.listen(PORT, () => console.log(`Baraka booking running on http://localhost:${PORT}`));
+app.delete('/api/admin/business-days/:id', auth(['admin', 'branch_employee']), async (req, res) => {
+  const data = await read();
+  const row = data.business_days.find(d => Number(d.id) === Number(req.params.id));
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  if (req.user.role === 'branch_employee' && Number(row.branch_id) !== Number(req.user.branch_id)) return res.status(403).json({ error: 'Forbidden for other branch' });
+  data.business_days = data.business_days.filter(d => Number(d.id) !== Number(req.params.id));
+  await write(data);
+  res.json({ ok: true });
+});
+
+(async () => {
+  try {
+    await seedIfNeeded();
+    app.listen(PORT, () => console.log(`Baraka booking running on http://localhost:${PORT} [driver=${process.env.STORAGE_DRIVER || 'json'}]`));
+  } catch (e) {
+    console.error('Failed to start application:', e.message);
+    process.exit(1);
+  }
+})();

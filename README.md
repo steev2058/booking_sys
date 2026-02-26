@@ -48,7 +48,14 @@ cp .env.example .env
 node scripts/migrate-json-to-mysql.js
 ```
 
-> ملاحظة: التطبيق runtime ما يزال يعمل مباشرة على `data.json` حاليًا. هذه أول خطوة التحويل، والخطوة التالية هي تحويل طبقة التشغيل نفسها للقراءة/الكتابة من MySQL.
+الآن التطبيق يدعم runtime مباشر على MySQL عبر المتغير:
+```env
+STORAGE_DRIVER=mysql
+```
+وللرجوع للوضع القديم:
+```env
+STORAGE_DRIVER=json
+```
 
 ## ملاحظات
 - تم الاستغناء عن `better-sqlite3` لضمان العمل على بيئات Python 3.6 بدون build native.
