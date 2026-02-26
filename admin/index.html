@@ -8,9 +8,11 @@
     body{font-family:Tahoma,Arial;background:#f1f4f9;margin:0;color:#173250}
     .wrap{max-width:1200px;margin:18px auto;padding:0 12px}
     .card{background:#fff;border:1px solid #d6e1ee;border-radius:12px;padding:14px;margin-bottom:12px}
-    input,select,textarea{padding:8px;border:1px solid #c8d6e7;border-radius:8px;width:100%}
+    input,select{padding:8px;border:1px solid #c8d6e7;border-radius:8px;width:100%}
     button{padding:8px 12px;border:0;border-radius:8px;background:#0d4b8e;color:#fff;cursor:pointer}
-    table{width:100%;border-collapse:collapse} th,td{border:1px solid #dde6f2;padding:6px;text-align:right}
+    button.danger{background:#b71c1c}
+    button.ghost{background:#eef4ff;color:#0d4b8e}
+    table{width:100%;border-collapse:collapse} th,td{border:1px solid #dde6f2;padding:6px;text-align:right;vertical-align:top}
     .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
     .col{flex:1;min-width:160px}
     .hide{display:none}
@@ -48,7 +50,7 @@
           <div class="col"><input id="b_loc" placeholder="الموقع"></div>
           <button onclick="addBranch()">إضافة</button>
         </div>
-        <table><thead><tr><th>ID</th><th>Code</th><th>Name</th><th>Location</th><th>Active</th></tr></thead><tbody id="branchesTb"></tbody></table>
+        <table><thead><tr><th>ID</th><th>Code</th><th>Name</th><th>Location</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="branchesTb"></tbody></table>
       </div>
 
       <div class="card">
@@ -58,55 +60,95 @@
           <div class="col"><input id="c_desc" placeholder="الوصف"></div>
           <button onclick="addCompany()">إضافة</button>
         </div>
-        <table><thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Active</th></tr></thead><tbody id="companiesTb"></tbody></table>
+        <table><thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="companiesTb"></tbody></table>
       </div>
+    </div>
 
-      <div class="card">
-        <h3>إدارة أيام الدوام</h3>
-        <div class="row">
-          <div class="col"><input id="d_branch" placeholder="branch_id"></div>
-          <div class="col"><input id="d_name" placeholder="day_name"></div>
-          <div class="col"><input id="d_start" placeholder="09:00"></div>
-          <div class="col"><input id="d_end" placeholder="15:00"></div>
-          <div class="col"><input id="d_int" placeholder="60"></div>
-          <button onclick="addBusinessDay()">إضافة</button>
-        </div>
-        <table><thead><tr><th>ID</th><th>Branch</th><th>Day</th><th>Start</th><th>End</th><th>Interval</th><th>Active</th></tr></thead><tbody id="daysTb"></tbody></table>
+    <div class="card">
+      <h3>إدارة أيام الدوام</h3>
+      <div class="row">
+        <div class="col"><input id="d_branch" placeholder="branch_id"></div>
+        <div class="col"><input id="d_name" placeholder="day_name"></div>
+        <div class="col"><input id="d_start" placeholder="09:00"></div>
+        <div class="col"><input id="d_end" placeholder="15:00"></div>
+        <div class="col"><input id="d_int" placeholder="60"></div>
+        <button onclick="addBusinessDay()">إضافة</button>
       </div>
+      <table><thead><tr><th>ID</th><th>Branch</th><th>Day</th><th>Start</th><th>End</th><th>Interval</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="daysTb"></tbody></table>
     </div>
   </div>
 </div>
 
 <script>
-let token=''; let role='';
+let token=''; let role=''; let myBranchId=null;
 async function j(u,o={}){const r=await fetch(u,o);return await r.json()}
 const h=()=>({Authorization:'Bearer '+token,'content-type':'application/json'});
 
 async function login(){
   const r=await j('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:u.value,password:p.value})});
   if(!r.token) return alert(r.error||'login failed');
-  token=r.token; role=r.role;
+  token=r.token; role=r.role; myBranchId=r.branch_id;
   loginCard.classList.add('hide'); panel.classList.remove('hide');
   if(role==='admin') adminOnly.classList.remove('hide');
+  else d_branch.value = myBranchId || '';
   await loadAppointments();
-  if(role==='admin'){ await loadBranches(); await loadCompanies(); await loadDays(); }
+  if(role==='admin'){ await loadBranches(); await loadCompanies(); }
+  await loadDays();
 }
 
 async function loadAppointments(){
   const q=[]; if(f.value) q.push('branch_id='+encodeURIComponent(f.value)); if(d.value) q.push('day_name='+encodeURIComponent(d.value));
   const r=await j('/api/admin/appointments'+(q.length?'?'+q.join('&'):''),{headers:{Authorization:'Bearer '+token}});
-  tb.innerHTML=(r.appointments||[]).map(x=>`<tr><td>${x.id}</td><td>${x.branch_name}</td><td>${x.company_name}</td><td>${x.day_name}</td><td>${x.slot_time}</td><td>${x.phone}</td><td>${x.status}</td><td>${role==='admin'?`<button onclick="delAppt(${x.id})">حذف</button>`:''}</td></tr>`).join('');
+  tb.innerHTML=(r.appointments||[]).map(x=>`<tr><td>${x.id}</td><td>${x.branch_name}</td><td>${x.company_name}</td><td>${x.day_name}</td><td>${x.slot_time}</td><td>${x.phone}</td><td>${x.status}</td><td>${role==='admin'?`<button class="danger" onclick="delAppt(${x.id})">حذف</button>`:''}</td></tr>`).join('');
 }
 async function delAppt(id){ await fetch('/api/admin/appointments/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}}); loadAppointments(); }
 
-async function loadBranches(){ const r=await j('/api/admin/branches',{headers:{Authorization:'Bearer '+token}}); branchesTb.innerHTML=(r.branches||[]).map(x=>`<tr><td>${x.id}</td><td>${x.code}</td><td>${x.name}</td><td>${x.location}</td><td>${x.active}</td></tr>`).join(''); }
+async function loadBranches(){
+  const r=await j('/api/admin/branches',{headers:{Authorization:'Bearer '+token}});
+  branchesTb.innerHTML=(r.branches||[]).map(x=>`<tr>
+    <td>${x.id}</td><td><input id='bc_${x.id}' value='${x.code}'></td><td><input id='bn_${x.id}' value='${x.name}'></td><td><input id='bl_${x.id}' value='${x.location}'></td>
+    <td><select id='ba_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td>
+    <td><button class='ghost' onclick='updBranch(${x.id})'>تعديل</button> <button class='danger' onclick='delBranch(${x.id})'>حذف</button></td>
+  </tr>`).join('');
+}
 async function addBranch(){ await fetch('/api/admin/branches',{method:'POST',headers:h(),body:JSON.stringify({code:b_code.value,name:b_name.value,location:b_loc.value})}); loadBranches(); }
+async function updBranch(id){ await fetch('/api/admin/branches/'+id,{method:'PUT',headers:h(),body:JSON.stringify({code:document.getElementById('bc_'+id).value,name:document.getElementById('bn_'+id).value,location:document.getElementById('bl_'+id).value,active:Number(document.getElementById('ba_'+id).value)})}); loadBranches(); }
+async function delBranch(id){ await fetch('/api/admin/branches/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}}); loadBranches(); }
 
-async function loadCompanies(){ const r=await j('/api/admin/companies',{headers:{Authorization:'Bearer '+token}}); companiesTb.innerHTML=(r.companies||[]).map(x=>`<tr><td>${x.id}</td><td>${x.name}</td><td>${x.description||''}</td><td>${x.active}</td></tr>`).join(''); }
+async function loadCompanies(){
+  const r=await j('/api/admin/companies',{headers:{Authorization:'Bearer '+token}});
+  companiesTb.innerHTML=(r.companies||[]).map(x=>`<tr>
+    <td>${x.id}</td><td><input id='cn_${x.id}' value='${x.name}'></td><td><input id='cd_${x.id}' value='${x.description||''}'></td>
+    <td><select id='ca_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td>
+    <td><button class='ghost' onclick='updCompany(${x.id})'>تعديل</button> <button class='danger' onclick='delCompany(${x.id})'>حذف</button></td>
+  </tr>`).join('');
+}
 async function addCompany(){ await fetch('/api/admin/companies',{method:'POST',headers:h(),body:JSON.stringify({name:c_name.value,description:c_desc.value})}); loadCompanies(); }
+async function updCompany(id){ await fetch('/api/admin/companies/'+id,{method:'PUT',headers:h(),body:JSON.stringify({name:document.getElementById('cn_'+id).value,description:document.getElementById('cd_'+id).value,active:Number(document.getElementById('ca_'+id).value)})}); loadCompanies(); }
+async function delCompany(id){ await fetch('/api/admin/companies/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}}); loadCompanies(); }
 
-async function loadDays(){ const r=await j('/api/admin/business-days',{headers:{Authorization:'Bearer '+token}}); daysTb.innerHTML=(r.business_days||[]).map(x=>`<tr><td>${x.id}</td><td>${x.branch_id}</td><td>${x.day_name}</td><td>${x.start_time}</td><td>${x.end_time}</td><td>${x.interval_minutes}</td><td>${x.active}</td></tr>`).join(''); }
-async function addBusinessDay(){ await fetch('/api/admin/business-days',{method:'POST',headers:h(),body:JSON.stringify({branch_id:Number(d_branch.value),day_name:d_name.value,start_time:d_start.value,end_time:d_end.value,interval_minutes:Number(d_int.value||60),active:1})}); loadDays(); }
+async function loadDays(){
+  const r=await j('/api/admin/business-days',{headers:{Authorization:'Bearer '+token}});
+  daysTb.innerHTML=(r.business_days||[]).map(x=>`<tr>
+    <td>${x.id}</td>
+    <td><input id='db_${x.id}' value='${x.branch_id}' ${role==='branch_employee'?'disabled':''}></td>
+    <td><input id='dd_${x.id}' value='${x.day_name}'></td>
+    <td><input id='ds_${x.id}' value='${x.start_time}'></td>
+    <td><input id='de_${x.id}' value='${x.end_time}'></td>
+    <td><input id='di_${x.id}' value='${x.interval_minutes}'></td>
+    <td><select id='da_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td>
+    <td><button class='ghost' onclick='updDay(${x.id})'>تعديل</button> <button class='danger' onclick='delDay(${x.id})'>حذف</button></td>
+  </tr>`).join('');
+}
+async function addBusinessDay(){
+  const payload={branch_id:Number(role==='branch_employee'?myBranchId:d_branch.value),day_name:d_name.value,start_time:d_start.value,end_time:d_end.value,interval_minutes:Number(d_int.value||60),active:1};
+  await fetch('/api/admin/business-days',{method:'POST',headers:h(),body:JSON.stringify(payload)}); loadDays();
+}
+async function updDay(id){
+  const payload={branch_id:Number(role==='branch_employee'?myBranchId:document.getElementById('db_'+id).value),day_name:document.getElementById('dd_'+id).value,start_time:document.getElementById('ds_'+id).value,end_time:document.getElementById('de_'+id).value,interval_minutes:Number(document.getElementById('di_'+id).value||60),active:Number(document.getElementById('da_'+id).value)};
+  await fetch('/api/admin/business-days/'+id,{method:'PUT',headers:h(),body:JSON.stringify(payload)}); loadDays();
+}
+async function delDay(id){ await fetch('/api/admin/business-days/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}}); loadDays(); }
 </script>
 </body>
 </html>
