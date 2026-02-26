@@ -97,6 +97,10 @@ function verifyCaptcha(answer, token) {
   }
 }
 
+function isValidPhone(phone) {
+  return /^\d{10}$/.test(String(phone || '').trim());
+}
+
 function getSec(data, phone) {
   let row = data.otp_security.find(x => x.phone === phone);
   if (!row) {
@@ -193,6 +197,7 @@ app.get('/api/captcha', (_req, res) => {
 app.post('/api/send-otp', async (req, res) => {
   const { phone, transfer_number, captcha_answer, captcha_token } = req.body || {};
   if (!phone || !transfer_number || !captcha_answer || !captcha_token) return res.status(400).json({ error: 'Missing fields' });
+  if (!isValidPhone(phone)) return res.status(400).json({ error: 'Phone must be exactly 10 digits' });
 
   const data = await read();
   const locked = ensureNotLocked(data, phone);
@@ -224,6 +229,7 @@ app.post('/api/send-otp', async (req, res) => {
 app.post('/api/book', async (req, res) => {
   const { transfer_number, branch_id, company_id, day_name, slot_time, phone, otp_code } = req.body || {};
   if (!transfer_number || !branch_id || !company_id || !day_name || !slot_time || !phone || !otp_code) return res.status(400).json({ error: 'Missing required fields' });
+  if (!isValidPhone(phone)) return res.status(400).json({ success: false, message: 'رقم الهاتف يجب أن يكون 10 خانات' });
 
   const data = await read();
   const locked = ensureNotLocked(data, phone);
