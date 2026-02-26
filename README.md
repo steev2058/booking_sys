@@ -1,4 +1,4 @@
-# booking_sys - منصة حجز دور بنك البركة (MVP)
+# booking_sys - منصة حجز دور بنك  (MVP)
 
 ## التشغيل
 ```bash
