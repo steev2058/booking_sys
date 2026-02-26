@@ -3,54 +3,107 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>حجز موعد استلام حوالة - بنك البركة</title>
+  <title>منصة حجز دور استلام حوالة - بنك البركة</title>
   <style>
-    body{font-family:Tahoma,Arial;background:#f0f3f8;margin:0;color:#16324f}
-    .hero{background:linear-gradient(90deg,#0a2d57,#114b8a);color:#fff;padding:16px 20px}
-    .hero h1{margin:0;font-size:20px}
-    .wrap{max-width:1050px;margin:18px auto;padding:0 12px}
-    .card{background:#fff;border:1px solid #d7e1ef;border-radius:14px;padding:14px;box-shadow:0 2px 12px rgba(0,0,0,.05)}
-    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-    label{display:block;font-size:13px;margin-bottom:4px;color:#1f3f63}
-    input,select{width:100%;padding:10px;border:1px solid #c8d6ea;border-radius:9px;background:#fdfefe}
-    .slots{display:grid;grid-template-columns:repeat(6,minmax(80px,1fr));gap:8px}
-    .slot{padding:9px;border-radius:8px;border:1px solid #c2d0e2;text-align:center;cursor:pointer;background:#e9f7ef;color:#156f3a;font-weight:600}
-    .slot.na{background:#fdecee;color:#9f1d35;cursor:not-allowed}
-    .slot.sel{outline:3px solid #0a66ff}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    button{padding:10px 14px;border:0;border-radius:8px;background:#0d4b8e;color:#fff;cursor:pointer}
-    .ghost{background:#eef4ff;color:#0d4b8e}
-    .msg{margin-top:10px;font-weight:700}
-    .muted{font-size:12px;color:#5a6f89}
-    @media (max-width:900px){.grid{grid-template-columns:1fr}.slots{grid-template-columns:repeat(3,minmax(80px,1fr));}}
+    :root{
+      --navy:#163a66;
+      --navy-2:#0f2f56;
+      --red:#c8102e;
+      --orange:#f57c00;
+      --bg:#f3f6fb;
+      --card:#ffffff;
+      --line:#d7e2f0;
+      --text:#1f3550;
+      --muted:#647a95;
+      --ok:#e9f8ef;
+      --ok-t:#106a3b;
+      --bad:#fdecef;
+      --bad-t:#a11932;
+    }
+    *{box-sizing:border-box}
+    body{font-family:Tahoma,Arial;background:var(--bg);margin:0;color:var(--text)}
+    .top{background:linear-gradient(90deg,var(--navy),var(--navy-2));color:#fff;padding:12px 20px;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+    .top-wrap{max-width:1080px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .top h1{margin:0;font-size:20px}
+    .logo{height:62px;background:#fff;border-radius:10px;padding:6px;border:1px solid #d8d8d8}
+
+    .wrap{max-width:1080px;margin:22px auto;padding:0 12px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 8px 30px rgba(12,45,89,.06)}
+
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    label{display:block;font-size:13px;margin-bottom:5px;color:#1f3f63;font-weight:700}
+    input,select{width:100%;padding:11px;border:1px solid #c7d7ec;border-radius:10px;background:#fff;color:#14304f}
+    input:focus,select:focus{outline:none;border-color:#2d6cdf;box-shadow:0 0 0 3px rgba(45,108,223,.15)}
+
+    .captcha-box{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .captcha-chip{background:#eff4ff;border:1px solid #d5e1fa;color:#123d78;padding:7px 12px;border-radius:8px;font-weight:800;letter-spacing:2px}
+
+    h3{margin:16px 0 10px;color:#163a66}
+    .slots{display:grid;grid-template-columns:repeat(6,minmax(90px,1fr));gap:8px}
+    .slot{padding:10px;border-radius:9px;border:1px solid #c2d0e2;text-align:center;cursor:pointer;background:var(--ok);color:var(--ok-t);font-weight:800;transition:.15s}
+    .slot:hover{transform:translateY(-1px)}
+    .slot.na{background:var(--bad);color:var(--bad-t);cursor:not-allowed}
+    .slot.sel{outline:3px solid #2d6cdf}
+
+    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+    button{padding:10px 14px;border:0;border-radius:9px;background:var(--navy);color:#fff;cursor:pointer;font-weight:700}
+    button:hover{background:var(--navy-2)}
+    button.ghost{background:#eef4ff;color:#0d4b8e}
+
+    .legend{font-size:12px;color:var(--muted);margin-top:8px}
+    .legend b{color:var(--text)}
+    .msg{margin-top:10px;font-weight:800}
+
+    .accent{height:4px;background:linear-gradient(90deg,var(--orange),var(--red));border-radius:99px;margin-bottom:12px}
+
+    @media (max-width:920px){
+      .grid{grid-template-columns:1fr}
+      .slots{grid-template-columns:repeat(3,minmax(80px,1fr))}
+      .top h1{font-size:17px}
+      .logo{height:54px}
+    }
   </style>
 </head>
 <body>
-  <div class="hero"><h1>منصة حجز دور استلام حوالة - بنك البركة</h1></div>
+  <div class="top">
+    <div class="top-wrap">
+      <h1>منصة حجز دور استلام حوالة - بنك البركة</h1>
+      <img class="logo" src="/albaraka-logo.jpg" alt="شعار بنك البركة" />
+    </div>
+  </div>
+
   <div class="wrap">
     <div class="card">
+      <div class="accent"></div>
+
       <div class="grid">
         <div><label>رقم الحوالة</label><input id="transfer" /></div>
         <div><label>رقم الهاتف</label><input id="phone" placeholder="09xxxxxxxx" /></div>
+
         <div><label>الفرع</label><select id="branch"></select></div>
         <div><label>شركة الحوالات</label><select id="company"></select></div>
+
         <div><label>اليوم</label><select id="day"></select></div>
         <div>
           <label>CAPTCHA</label>
-          <div class="row"><b id="captchaQ"></b> <button class="ghost" onclick="refreshCaptcha()">تحديث</button></div>
+          <div class="captcha-box">
+            <span id="captchaQ" class="captcha-chip"></span>
+            <button class="ghost" onclick="refreshCaptcha()">تحديث</button>
+          </div>
           <input id="captchaA" placeholder="اكتب رمز التحقق" />
         </div>
       </div>
 
       <h3>الأوقات المتاحة</h3>
       <div class="slots" id="slots"></div>
-      <p class="muted">الأخضر: متاح — الأحمر: محجوز مسبقاً</p>
+      <div class="legend"><b>الأخضر:</b> متاح — <b>الأحمر:</b> محجوز مسبقاً</div>
 
-      <div class="row">
+      <div class="actions">
         <button onclick="sendOtp()">إرسال رمز 4 خانات</button>
-        <input id="otp" placeholder="أدخل الرمز" style="max-width:180px" />
+        <input id="otp" placeholder="أدخل الرمز" style="max-width:190px" />
         <button onclick="book()">تأكيد الحجز</button>
       </div>
+
       <div class="msg" id="msg"></div>
     </div>
   </div>
@@ -111,7 +164,7 @@ async function sendOtp(){
       captcha_token:captchaToken
     })
   });
-  msg.style.color=r.ok?'green':'#b00020';
+  msg.style.color=r.ok?'#106a3b':'#b00020';
   msg.textContent=r.message||r.error||'خطأ غير متوقع';
   if(!r.ok) await refreshCaptcha();
 }
@@ -130,7 +183,7 @@ async function book(){
       otp_code:otp.value
     })
   });
-  msg.style.color=r.success?'green':'#b00020';
+  msg.style.color=r.success?'#106a3b':'#b00020';
   msg.textContent=r.message||r.error||'خطأ غير متوقع';
   if(r.success) await loadSlots();
 }
