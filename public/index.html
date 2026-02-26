@@ -123,11 +123,13 @@
     </div>
     <div class="footer">جميع الحقوق محفوظة لبنك البركة © 2026</div>
   </div>
+  <div id="toast" style="position:fixed;left:16px;bottom:16px;background:#263238;color:#fff;padding:10px 14px;border-radius:10px;font-weight:700;display:none;z-index:9999"></div>
 
 <script>
 let captchaToken='',selectedSlot='',selectedDay='',daysConfig=[],step=1;
 const setStep=()=>{['p1','p2','p3'].forEach((x,i)=>document.getElementById(x).classList.toggle('active',i+1===step));['s1','s2','s3'].forEach((x,i)=>document.getElementById(x).classList.toggle('active',i+1===step));}
-function nextStep(n){if(n===2&&(!transfer.value||!phone.value)){msg.style.color='#b00020';msg.textContent='يرجى تعبئة رقم الحوالة والهاتف';return;}if(n===3&&!selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';return;}step=n;setStep();}
+function showToast(text, ok=true){const t=document.getElementById('toast');t.textContent=text;t.style.background=ok?'#1b5e20':'#b00020';t.style.display='block';clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.style.display='none',2500)}
+function nextStep(n){if(n===2&&(!transfer.value||!phone.value)){msg.style.color='#b00020';msg.textContent='يرجى تعبئة رقم الحوالة والهاتف';showToast('يرجى تعبئة رقم الحوالة والهاتف',false);return;}if(n===3&&!selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';showToast('الرجاء اختيار وقت متاح',false);return;}step=n;setStep();}
 async function j(url, options){const r=await fetch(url, options);return await r.json();}
 async function refreshCaptcha(){
   const cap=await j('/api/captcha');
@@ -145,8 +147,8 @@ async function init(){const b=await j('/api/branches');branch.innerHTML=b.branch
 async function loadDays(){const d=await j('/api/business-days?branch_id='+branch.value);daysConfig=d.days||[];selectedDay='';days.innerHTML=daysConfig.map((x,i)=>`<div class="chip ${i===0?'active':''}" data-day="${x.day_name}">${x.day_name}</div>`).join('');if(daysConfig[0])selectedDay=daysConfig[0].day_name;document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');selectedDay=el.dataset.day;loadSlots();});await loadSlots();}
 async function loadSlots(){selectedSlot='';if(!selectedDay){slots.innerHTML='';return;}const s=await j(`/api/slots?branch_id=${branch.value}&day_name=${encodeURIComponent(selectedDay)}`);slots.innerHTML=(s.slots||[]).map(x=>`<div class="slot ${x.available?'':'na'}" data-time="${x.time}"><span>⏱</span><span>${x.time}</span></div>`).join('');document.querySelectorAll('.slot:not(.na)').forEach(el=>el.onclick=()=>{document.querySelectorAll('.slot').forEach(a=>a.classList.remove('sel'));el.classList.add('sel');selectedSlot=el.dataset.time;});}
 branch.onchange=loadDays;
-async function sendOtp(){const r=await j('/api/send-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:phone.value,transfer_number:transfer.value,captcha_answer:captchaA.value,captcha_token:captchaToken})});msg.style.color=r.ok?'#1b5e20':'#b00020';msg.textContent=r.message||r.error||'خطأ غير متوقع';if(!r.ok)await refreshCaptcha();}
-async function book(){const r=await j('/api/book',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({transfer_number:transfer.value,branch_id:branch.value,company_id:company.value,day_name:selectedDay,slot_time:selectedSlot,phone:phone.value,otp_code:otp.value})});msg.style.color=r.success?'#1b5e20':'#b00020';msg.textContent=r.message||r.error||'خطأ غير متوقع';if(r.success){await loadSlots();step=1;setStep();}}
+async function sendOtp(){const r=await j('/api/send-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:phone.value,transfer_number:transfer.value,captcha_answer:captchaA.value,captcha_token:captchaToken})});msg.style.color=r.ok?'#1b5e20':'#b00020';msg.textContent=r.message||r.error||'خطأ غير متوقع';showToast(r.message||r.error||'خطأ غير متوقع',!!r.ok);if(!r.ok)await refreshCaptcha();}
+async function book(){if(!window.confirm('تأكيد حجز هذا الموعد؟'))return;const r=await j('/api/book',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({transfer_number:transfer.value,branch_id:branch.value,company_id:company.value,day_name:selectedDay,slot_time:selectedSlot,phone:phone.value,otp_code:otp.value})});msg.style.color=r.success?'#1b5e20':'#b00020';msg.textContent=r.message||r.error||'خطأ غير متوقع';showToast(r.message||r.error||'خطأ غير متوقع',!!r.success);if(r.success){await loadSlots();step=1;setStep();}}
 init();
 </script>
 </body>
