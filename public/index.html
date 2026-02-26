@@ -41,10 +41,11 @@
     .slot.na{background:#ffe9e9;border-color:#ef9a9a;color:#a11d1d;cursor:not-allowed}
     .slot.sel{background:#eceff1;border-color:#90a4ae}
 
-    .captcha-wrap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
-    .captcha-img{height:80px;width:240px;border:1px solid #d4b0ba;border-radius:12px;background:#f2d5dc}
+    .captcha-wrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0;padding:10px;border:1px dashed #d6c2c8;border-radius:12px;background:#fcf7f8}
+    .captcha-img{height:84px;width:260px;border:1px solid #d4b0ba;border-radius:12px;background:#f2d5dc;display:block}
+    .captcha-fallback{font-weight:800;color:#6d4c57}
 
-    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
     button{padding:10px 14px;border:0;border-radius:11px;background:linear-gradient(120deg,var(--orange),var(--red));color:#fff;font-weight:800;cursor:pointer}
     button.alt{background:#eceff1;color:#455a64}
 
@@ -63,8 +64,9 @@
       .step{font-size:12px;padding:8px 10px}
       .actions{flex-direction:column}
       .actions button,.actions input{width:100%;max-width:none!important}
-      .captcha-wrap{flex-direction:column;align-items:stretch}
-      .captcha-img{width:100%;max-width:320px}
+      .captcha-wrap{flex-direction:column;align-items:stretch;padding:10px}
+      .captcha-img{width:100%;max-width:100%}
+      .captcha-fallback{padding:8px 10px;background:#f3e5e8;border-radius:10px;text-align:center}
     }
   </style>
 </head>
@@ -103,9 +105,10 @@
       <div id="p3" class="section">
         <label>CAPTCHA</label>
         <div class="captcha-wrap">
-          <img id="captchaImg" class="captcha-img" alt="captcha">
+          <img id="captchaImg" class="captcha-img" alt="captcha" onerror="this.style.display='none';captchaFallback.textContent='تعذر تحميل الصورة - اضغط تحديث';">
+          <div id="captchaFallback" class="captcha-fallback"></div>
           <button class="alt" onclick="refreshCaptcha()">تحديث</button>
-          <input id="captchaA" placeholder="ادخل الرمز في الصورة" style="max-width:220px">
+          <input id="captchaA" placeholder="ادخل الرمز في الصورة" style="max-width:240px">
         </div>
 
         <div class="actions">
@@ -126,7 +129,18 @@ let captchaToken='',selectedSlot='',selectedDay='',daysConfig=[],step=1;
 const setStep=()=>{['p1','p2','p3'].forEach((x,i)=>document.getElementById(x).classList.toggle('active',i+1===step));['s1','s2','s3'].forEach((x,i)=>document.getElementById(x).classList.toggle('active',i+1===step));}
 function nextStep(n){if(n===2&&(!transfer.value||!phone.value)){msg.style.color='#b00020';msg.textContent='يرجى تعبئة رقم الحوالة والهاتف';return;}if(n===3&&!selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';return;}step=n;setStep();}
 async function j(url, options){const r=await fetch(url, options);return await r.json();}
-async function refreshCaptcha(){const cap=await j('/api/captcha');captchaImg.src=cap.image;captchaToken=cap.token;}
+async function refreshCaptcha(){
+  const cap=await j('/api/captcha');
+  captchaToken=cap.token;
+  if(cap.image){
+    captchaImg.style.display='block';
+    captchaImg.src=cap.image;
+    captchaFallback.textContent='';
+  }else{
+    captchaImg.style.display='none';
+    captchaFallback.textContent=cap.challenge||'CAPTCHA';
+  }
+}
 async function init(){const b=await j('/api/branches');branch.innerHTML=b.branches.map(x=>`<option value="${x.id}">${x.name} (${x.code}) - ${x.location}</option>`).join('');const c=await j('/api/companies');company.innerHTML=c.companies.map(x=>`<option value="${x.id}">${x.name}${x.description?` - ${x.description}`:''}</option>`).join('');await refreshCaptcha();await loadDays();}
 async function loadDays(){const d=await j('/api/business-days?branch_id='+branch.value);daysConfig=d.days||[];selectedDay='';days.innerHTML=daysConfig.map((x,i)=>`<div class="chip ${i===0?'active':''}" data-day="${x.day_name}">${x.day_name}</div>`).join('');if(daysConfig[0])selectedDay=daysConfig[0].day_name;document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');selectedDay=el.dataset.day;loadSlots();});await loadSlots();}
 async function loadSlots(){selectedSlot='';if(!selectedDay){slots.innerHTML='';return;}const s=await j(`/api/slots?branch_id=${branch.value}&day_name=${encodeURIComponent(selectedDay)}`);slots.innerHTML=(s.slots||[]).map(x=>`<div class="slot ${x.available?'':'na'}" data-time="${x.time}"><span>⏱</span><span>${x.time}</span></div>`).join('');document.querySelectorAll('.slot:not(.na)').forEach(el=>el.onclick=()=>{document.querySelectorAll('.slot').forEach(a=>a.classList.remove('sel'));el.classList.add('sel');selectedSlot=el.dataset.time;});}

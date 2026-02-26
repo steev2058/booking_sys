@@ -190,7 +190,12 @@ app.get('/api/slots', (req, res) => {
 
 app.get('/api/captcha', (_req, res) => {
   const c = createCaptcha();
-  res.json({ image: c.image, token: c.token, hint: 'ادخل الرموز في الصورة' });
+  res.json({
+    image: c.image,
+    challenge: c.code.split('').join(' '),
+    token: c.token,
+    hint: 'ادخل الرموز في الصورة'
+  });
 });
 
 app.post('/api/send-otp', async (req, res) => {
