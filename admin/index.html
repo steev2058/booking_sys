@@ -57,6 +57,9 @@
   </div>
 
   <div id="panel" class="hide">
+    <div class="row" style="justify-content:flex-start;margin-bottom:8px">
+      <button class="ghost" onclick="logout()">تسجيل خروج</button>
+    </div>
     <div class="tabs">
       <div id="tab-appts" class="tab active" onclick="showSection('appts')">المواعيد</div>
       <div id="tab-branches" class="tab" onclick="showSection('branches')">الفروع</div>
@@ -108,6 +111,7 @@ const h=()=>({Authorization:'Bearer '+token,'content-type':'application/json'});
 function showToast(text, ok=true){const t=document.getElementById('toast');t.textContent=text;t.style.background=ok?'#1b5e20':'#b00020';t.style.display='block';clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.style.display='none',2500)}
 function confirmAction(text){return new Promise((resolve)=>{const m=document.getElementById('confirmModal');document.getElementById('confirmText').textContent=text;m.style.display='flex';document.getElementById('confirmYes').onclick=()=>{m.style.display='none';resolve(true)};document.getElementById('confirmNo').onclick=()=>{m.style.display='none';resolve(false)};});}
 function showSection(name){['appts','branches','companies','days'].forEach(k=>{document.getElementById('sec-'+k).classList.toggle('active',k===name);document.getElementById('tab-'+k).classList.toggle('active',k===name)});if(role!=='admin'&&(name==='branches'||name==='companies'))showSection('appts');}
+function logout(){token='';role='';myBranchId=null;panel.classList.add('hide');loginCard.classList.remove('hide');u.value='';p.value='';document.getElementById('tab-branches').style.display='';document.getElementById('tab-companies').style.display='';showToast('تم تسجيل الخروج بنجاح');}
 async function login(){const r=await j('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:u.value,password:p.value})});if(!r.token){showToast(r.error||'فشل تسجيل الدخول',false);return;}token=r.token;role=r.role;myBranchId=r.branch_id;loginCard.classList.add('hide');panel.classList.remove('hide');if(role!=='admin'){document.getElementById('tab-branches').style.display='none';document.getElementById('tab-companies').style.display='none';d_branch.value=myBranchId||'';}await loadAppointments();if(role==='admin'){await loadBranches();await loadCompanies();}await loadDays();showToast('تم تسجيل الدخول بنجاح');}
 async function loadAppointments(){const q=[];if(f.value)q.push('branch_id='+encodeURIComponent(f.value));if(d.value)q.push('day_name='+encodeURIComponent(d.value));const r=await j('/api/admin/appointments'+(q.length?'?'+q.join('&'):''),{headers:{Authorization:'Bearer '+token}});tb.innerHTML=(r.appointments||[]).map(x=>`<tr><td>${x.id}</td><td>${x.branch_name}</td><td>${x.company_name}</td><td>${x.day_name}</td><td>${x.slot_time}</td><td>${x.phone}</td><td>${x.status}</td><td>${role==='admin'?`<button class="danger" onclick="delAppt(${x.id})">حذف</button>`:''}</td></tr>`).join('');}
 async function delAppt(id){if(!await confirmAction('تأكيد حذف هذا الموعد؟'))return;await fetch('/api/admin/appointments/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});await loadAppointments();showToast('تم حذف الموعد');}
