@@ -24,9 +24,22 @@
     button{padding:9px 12px;border:0;border-radius:10px;background:linear-gradient(120deg,var(--orange),var(--red));color:#fff;font-weight:800;cursor:pointer}
     button.ghost{background:#eceff1;color:#455a64}
     button.danger{background:#b71c1c}
-    table{width:100%;border-collapse:collapse}th,td{border:1px solid #d7e2f0;padding:7px;text-align:right}th{background:#f5f8ff}
+    .table-wrap{overflow:auto;-webkit-overflow-scrolling:touch}
+    table{width:100%;border-collapse:collapse;min-width:860px}th,td{border:1px solid #d7e2f0;padding:7px;text-align:right}th{background:#f5f8ff}
     .hide{display:none}
     h3{margin:0 0 10px}
+    @media(max-width:900px){
+      .top-in{padding:8px 10px}
+      .logo{height:42px}
+      .service{padding:8px 12px;font-size:13px;border-radius:0 0 0 18px}
+      .main{padding:0 8px}
+      .card{padding:10px}
+      .tabs{gap:6px}
+      .tab{font-size:12px;padding:8px 10px}
+      .row{flex-direction:column;align-items:stretch}
+      .col{min-width:100%}
+      button{width:100%}
+    }
   </style>
 </head>
 <body>
@@ -48,25 +61,25 @@
     <div id="sec-appts" class="section active card">
       <h3>المواعيد</h3>
       <div class="row"><div class="col"><input id="f" placeholder="فلترة branch_id"></div><div class="col"><input id="d" placeholder="فلترة day_name"></div><button onclick="loadAppointments()">فلترة</button></div>
-      <table><thead><tr><th>ID</th><th>الفرع</th><th>الشركة</th><th>اليوم</th><th>الوقت</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="tb"></tbody></table>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>الفرع</th><th>الشركة</th><th>اليوم</th><th>الوقت</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="tb"></tbody></table></div>
     </div>
 
     <div id="sec-branches" class="section card">
       <h3>إدارة الفروع</h3>
       <div class="row"><div class="col"><input id="b_code" placeholder="رمز الفرع"></div><div class="col"><input id="b_name" placeholder="اسم الفرع"></div><div class="col"><input id="b_loc" placeholder="الموقع"></div><button onclick="addBranch()">إضافة</button></div>
-      <table><thead><tr><th>ID</th><th>Code</th><th>Name</th><th>Location</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="branchesTb"></tbody></table>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>Code</th><th>Name</th><th>Location</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="branchesTb"></tbody></table></div>
     </div>
 
     <div id="sec-companies" class="section card">
       <h3>إدارة شركات الحوالات</h3>
       <div class="row"><div class="col"><input id="c_name" placeholder="اسم الشركة"></div><div class="col"><input id="c_desc" placeholder="الوصف"></div><button onclick="addCompany()">إضافة</button></div>
-      <table><thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="companiesTb"></tbody></table>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="companiesTb"></tbody></table></div>
     </div>
 
     <div id="sec-days" class="section card">
       <h3>إدارة أيام الدوام</h3>
       <div class="row"><div class="col"><input id="d_branch" placeholder="branch_id"></div><div class="col"><input id="d_name" placeholder="day_name"></div><div class="col"><input id="d_start" placeholder="09:00"></div><div class="col"><input id="d_end" placeholder="15:00"></div><div class="col"><input id="d_int" placeholder="60"></div><button onclick="addBusinessDay()">إضافة</button></div>
-      <table><thead><tr><th>ID</th><th>Branch</th><th>Day</th><th>Start</th><th>End</th><th>Interval</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="daysTb"></tbody></table>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>Branch</th><th>Day</th><th>Start</th><th>End</th><th>Interval</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="daysTb"></tbody></table></div>
     </div>
   </div>
 </div>
