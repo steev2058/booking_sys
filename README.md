@@ -15,14 +15,16 @@ npm run dev
 - admin / admin1234
 - dam_emp / branch1234
 
-## الجداول
+## جداول البيانات (داخل data.json)
 - branches
 - remittance_companies
 - business_days
 - appointments
 - dashboard_users
 - otp_codes
+- otp_security
 
 ## ملاحظات
-- OTP حالياً Mock (يظهر في logs) حتى ربط SMS Gateway الحقيقي.
-- CAPTCHA بسيط في النسخة الأولى.
+- تم الاستغناء عن `better-sqlite3` لضمان العمل على بيئات Python 3.6 بدون build native.
+- التخزين الحالي JSON file-based في `data.json`.
+- OTP مرتبط مع MTN API حسب الإعدادات في `.env`.
