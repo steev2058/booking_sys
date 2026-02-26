@@ -4,7 +4,11 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "db:up": "docker compose -f docker-compose.db.yml up -d",
+    "db:down": "docker compose -f docker-compose.db.yml down",
+    "db:schema": "mysql -h ${DB_HOST:-127.0.0.1} -P ${DB_PORT:-3306} -u ${DB_USER:-booking_user} -p${DB_PASS:-booking_pass} ${DB_NAME:-booking_sys} < database/schema.sql",
+    "db:migrate": "node scripts/migrate-json-to-mysql.js"
   },
   "keywords": [],
   "author": "",
@@ -15,7 +19,8 @@
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.18.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

@@ -24,6 +24,32 @@ npm run dev
 - otp_codes
 - otp_security
 
+## MySQL + phpMyAdmin (بدء التحويل)
+تم تجهيز مسار تحويل البيانات من `data.json` إلى MySQL.
+
+### تشغيل MySQL + phpMyAdmin محليًا
+```bash
+npm run db:up
+```
+
+- MySQL: `127.0.0.1:3306`
+- phpMyAdmin: `http://localhost:8081`
+- المستخدم الافتراضي: `booking_user`
+- كلمة المرور الافتراضية: `booking_pass`
+
+### إنشاء الجداول
+```bash
+mysql -h 127.0.0.1 -P 3306 -u booking_user -pbooking_pass booking_sys < database/schema.sql
+```
+
+### نقل البيانات من JSON إلى MySQL
+```bash
+cp .env.example .env
+node scripts/migrate-json-to-mysql.js
+```
+
+> ملاحظة: التطبيق runtime ما يزال يعمل مباشرة على `data.json` حاليًا. هذه أول خطوة التحويل، والخطوة التالية هي تحويل طبقة التشغيل نفسها للقراءة/الكتابة من MySQL.
+
 ## ملاحظات
 - تم الاستغناء عن `better-sqlite3` لضمان العمل على بيئات Python 3.6 بدون build native.
 - التخزين الحالي JSON file-based في `data.json`.
