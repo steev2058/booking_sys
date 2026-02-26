@@ -84,10 +84,10 @@
     <div class="card">
       <div id="p1" class="section active">
         <div class="grid">
+          <div><label>شركة الحوالات</label><select id="company"></select></div>
           <div><label>رقم الحوالة</label><input id="transfer"></div>
           <div><label>رقم الهاتف</label><input id="phone" placeholder="09xxxxxxxx"></div>
           <div><label>الفرع</label><select id="branch"></select></div>
-          <div><label>شركة الحوالات</label><select id="company"></select></div>
         </div>
         <div class="actions"><button onclick="nextStep(2)">التالي</button></div>
       </div>
@@ -143,7 +143,7 @@ async function refreshCaptcha(){
     captchaFallback.textContent=cap.challenge||'CAPTCHA';
   }
 }
-async function init(){const b=await j('/api/branches');branch.innerHTML=b.branches.map(x=>`<option value="${x.id}">${x.name} (${x.code}) - ${x.location}</option>`).join('');const c=await j('/api/companies');company.innerHTML=c.companies.map(x=>`<option value="${x.id}">${x.name}${x.description?` - ${x.description}`:''}</option>`).join('');await refreshCaptcha();await loadDays();}
+async function init(){const b=await j('/api/branches');branch.innerHTML=b.branches.map(x=>`<option value="${x.id}">${x.name} - ${x.location}</option>`).join('');const c=await j('/api/companies');company.innerHTML=c.companies.map(x=>`<option value="${x.id}">${x.name}${x.description?` - ${x.description}`:''}</option>`).join('');await refreshCaptcha();await loadDays();}
 async function loadDays(){const d=await j('/api/business-days?branch_id='+branch.value);daysConfig=d.days||[];selectedDay='';days.innerHTML=daysConfig.map((x,i)=>`<div class="chip ${i===0?'active':''}" data-day="${x.day_name}">${x.day_name}</div>`).join('');if(daysConfig[0])selectedDay=daysConfig[0].day_name;document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');selectedDay=el.dataset.day;loadSlots();});await loadSlots();}
 async function loadSlots(){selectedSlot='';if(!selectedDay){slots.innerHTML='';return;}const s=await j(`/api/slots?branch_id=${branch.value}&day_name=${encodeURIComponent(selectedDay)}`);slots.innerHTML=(s.slots||[]).map(x=>`<div class="slot ${x.available?'':'na'}" data-time="${x.time}"><span>⏱</span><span>${x.time}</span></div>`).join('');document.querySelectorAll('.slot:not(.na)').forEach(el=>el.onclick=()=>{document.querySelectorAll('.slot').forEach(a=>a.classList.remove('sel'));el.classList.add('sel');selectedSlot=el.dataset.time;});}
 branch.onchange=loadDays;
