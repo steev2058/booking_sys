@@ -8,44 +8,30 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root{--navy:#163a66;--navy2:#0f2f56;--red:#c8102e;--orange:#f57c00;--bg:#f3f6fb;--line:#d7e2f0;--text:#1f3550}
+    :root{--blue:#0f4f95;--blue2:#0d3f76;--burg:#8d1e33;--ink:#21344a;--line:#1f5f93;--bg:#f7f8fb}
     *{box-sizing:border-box}
-    body{font-family:'Cairo',Tahoma,Arial;background:var(--bg);margin:0;color:var(--text)}
-    .top{background:linear-gradient(90deg,var(--navy),var(--navy2));color:#fff;padding:12px 20px}
-    .top-wrap{max-width:1250px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
-    .logo{height:54px;background:#fff;border-radius:10px;padding:6px}
-    .wrap{max-width:1250px;margin:16px auto;padding:0 12px}
-    .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 8px 25px rgba(12,45,89,.06)}
-    .accent{height:4px;background:linear-gradient(90deg,var(--orange),var(--red));border-radius:99px;margin:-14px -14px 12px -14px}
-    h3{margin:8px 0 12px}
-    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .col{flex:1;min-width:160px}
-    input,select{padding:9px;border:1px solid #c8d6e7;border-radius:8px;width:100%}
-    button{padding:8px 12px;border:0;border-radius:8px;background:var(--navy);color:#fff;cursor:pointer;font-weight:700}
-    button:hover{background:var(--navy2)}
-    button.danger{background:#b71c1c}
-    button.ghost{background:#eef4ff;color:#0d4b8e}
-    table{width:100%;border-collapse:collapse;background:#fff} th,td{border:1px solid #dde6f2;padding:7px;text-align:right;vertical-align:top}
-    th{background:#f4f8ff}
-    .hide{display:none}
-    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-    .tab{padding:8px 12px;border-radius:999px;border:1px solid #c6d7ee;background:#fff;color:#36557b;cursor:pointer;font-weight:700}
-    .tab.active{background:#e8f0ff;border-color:#6a93d6;color:#133c72}
+    body{font-family:'Cairo',sans-serif;background:var(--bg);margin:0;color:var(--ink)}
+    .top{background:#fff;border-bottom:6px solid #1e1f23}
+    .top-in{max-width:1280px;margin:auto;display:flex;align-items:center;justify-content:space-between;padding:10px 14px}
+    .logo{height:52px}.service{background:linear-gradient(120deg,#c02a46,var(--burg));color:#fff;padding:10px 18px;border-radius:0 0 0 28px;font-weight:800}
+    .main{max-width:1280px;margin:16px auto;padding:0 12px}
+    .card{background:#fff;border:1px solid #e3e9f2;border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 10px 24px rgba(20,45,78,.06)}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.tab{padding:9px 14px;border:2px solid #2d6e9f;border-radius:14px;background:#fff;cursor:pointer;font-weight:800}.tab.active{background:var(--blue);border-color:var(--blue);color:#fff}
     .section{display:none}.section.active{display:block}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.col{flex:1;min-width:170px}
+    input,select{width:100%;padding:10px;border:2px solid #2d6e9f;border-radius:12px;background:#fff;font-weight:700}
+    button{padding:9px 12px;border:0;border-radius:10px;background:var(--blue);color:#fff;font-weight:800;cursor:pointer}
+    button.ghost{background:#eef4ff;color:#12457a}button.danger{background:#b71c1c}
+    table{width:100%;border-collapse:collapse}th,td{border:1px solid #d7e2f0;padding:7px;text-align:right}th{background:#f5f8ff}
+    .hide{display:none}
   </style>
 </head>
 <body>
-<div class="top"><div class="top-wrap"><h2 style="margin:0">لوحة تحكم منصة الحجز - بنك البركة</h2><img src="/albaraka-logo.jpg" class="logo" alt="logo"></div></div>
-<div class="wrap">
+<div class="top"><div class="top-in"><img class="logo" src="/albaraka-logo.jpg" alt="logo"><div class="service">لوحة تحكم الحجوزات</div></div></div>
+<div class="main">
   <div class="card" id="loginCard">
-    <div class="accent"></div>
     <h3>تسجيل دخول لوحة التحكم</h3>
-    <div class="row">
-      <div class="col"><input id="u" placeholder="username"></div>
-      <div class="col"><input id="p" type="password" placeholder="password"></div>
-      <button onclick="login()">دخول</button>
-    </div>
-    <small>افتراضي: admin/admin1234</small>
+    <div class="row"><div class="col"><input id="u" placeholder="username"></div><div class="col"><input id="p" type="password" placeholder="password"></div><button onclick="login()">دخول</button></div>
   </div>
 
   <div id="panel" class="hide">
@@ -57,50 +43,26 @@
     </div>
 
     <div id="sec-appts" class="section active card">
-      <div class="accent"></div>
       <h3>المواعيد</h3>
-      <div class="row">
-        <div class="col"><input id="f" placeholder="فلترة branch_id"></div>
-        <div class="col"><input id="d" placeholder="فلترة day_name"></div>
-        <button onclick="loadAppointments()">فلترة</button>
-      </div>
+      <div class="row"><div class="col"><input id="f" placeholder="فلترة branch_id"></div><div class="col"><input id="d" placeholder="فلترة day_name"></div><button onclick="loadAppointments()">فلترة</button></div>
       <table><thead><tr><th>ID</th><th>الفرع</th><th>الشركة</th><th>اليوم</th><th>الوقت</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="tb"></tbody></table>
     </div>
 
     <div id="sec-branches" class="section card">
-      <div class="accent"></div>
       <h3>إدارة الفروع</h3>
-      <div class="row">
-        <div class="col"><input id="b_code" placeholder="رمز الفرع"></div>
-        <div class="col"><input id="b_name" placeholder="اسم الفرع"></div>
-        <div class="col"><input id="b_loc" placeholder="الموقع"></div>
-        <button onclick="addBranch()">إضافة</button>
-      </div>
+      <div class="row"><div class="col"><input id="b_code" placeholder="رمز الفرع"></div><div class="col"><input id="b_name" placeholder="اسم الفرع"></div><div class="col"><input id="b_loc" placeholder="الموقع"></div><button onclick="addBranch()">إضافة</button></div>
       <table><thead><tr><th>ID</th><th>Code</th><th>Name</th><th>Location</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="branchesTb"></tbody></table>
     </div>
 
     <div id="sec-companies" class="section card">
-      <div class="accent"></div>
       <h3>إدارة شركات الحوالات</h3>
-      <div class="row">
-        <div class="col"><input id="c_name" placeholder="اسم الشركة"></div>
-        <div class="col"><input id="c_desc" placeholder="الوصف"></div>
-        <button onclick="addCompany()">إضافة</button>
-      </div>
+      <div class="row"><div class="col"><input id="c_name" placeholder="اسم الشركة"></div><div class="col"><input id="c_desc" placeholder="الوصف"></div><button onclick="addCompany()">إضافة</button></div>
       <table><thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="companiesTb"></tbody></table>
     </div>
 
     <div id="sec-days" class="section card">
-      <div class="accent"></div>
       <h3>إدارة أيام الدوام</h3>
-      <div class="row">
-        <div class="col"><input id="d_branch" placeholder="branch_id"></div>
-        <div class="col"><input id="d_name" placeholder="day_name"></div>
-        <div class="col"><input id="d_start" placeholder="09:00"></div>
-        <div class="col"><input id="d_end" placeholder="15:00"></div>
-        <div class="col"><input id="d_int" placeholder="60"></div>
-        <button onclick="addBusinessDay()">إضافة</button>
-      </div>
+      <div class="row"><div class="col"><input id="d_branch" placeholder="branch_id"></div><div class="col"><input id="d_name" placeholder="day_name"></div><div class="col"><input id="d_start" placeholder="09:00"></div><div class="col"><input id="d_end" placeholder="15:00"></div><div class="col"><input id="d_int" placeholder="60"></div><button onclick="addBusinessDay()">إضافة</button></div>
       <table><thead><tr><th>ID</th><th>Branch</th><th>Day</th><th>Start</th><th>End</th><th>Interval</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="daysTb"></tbody></table>
     </div>
   </div>
@@ -110,47 +72,22 @@
 let token=''; let role=''; let myBranchId=null;
 async function j(u,o={}){const r=await fetch(u,o);return await r.json()}
 const h=()=>({Authorization:'Bearer '+token,'content-type':'application/json'});
-
-function showSection(name){
-  ['appts','branches','companies','days'].forEach(k=>{
-    document.getElementById('sec-'+k).classList.toggle('active',k===name);
-    document.getElementById('tab-'+k).classList.toggle('active',k===name);
-  });
-  if(role!=='admin' && (name==='branches'||name==='companies')) showSection('appts');
-}
-
-async function login(){
-  const r=await j('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:u.value,password:p.value})});
-  if(!r.token) return alert(r.error||'login failed');
-  token=r.token; role=r.role; myBranchId=r.branch_id;
-  loginCard.classList.add('hide'); panel.classList.remove('hide');
-  if(role!=='admin'){document.getElementById('tab-branches').style.display='none';document.getElementById('tab-companies').style.display='none';d_branch.value=myBranchId||'';}
-  await loadAppointments();
-  if(role==='admin'){ await loadBranches(); await loadCompanies(); }
-  await loadDays();
-}
-
-async function loadAppointments(){
-  const q=[]; if(f.value) q.push('branch_id='+encodeURIComponent(f.value)); if(d.value) q.push('day_name='+encodeURIComponent(d.value));
-  const r=await j('/api/admin/appointments'+(q.length?'?'+q.join('&'):''),{headers:{Authorization:'Bearer '+token}});
-  tb.innerHTML=(r.appointments||[]).map(x=>`<tr><td>${x.id}</td><td>${x.branch_name}</td><td>${x.company_name}</td><td>${x.day_name}</td><td>${x.slot_time}</td><td>${x.phone}</td><td>${x.status}</td><td>${role==='admin'?`<button class="danger" onclick="delAppt(${x.id})">حذف</button>`:''}</td></tr>`).join('');
-}
-async function delAppt(id){ await fetch('/api/admin/appointments/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}}); loadAppointments(); }
-
-async function loadBranches(){ const r=await j('/api/admin/branches',{headers:{Authorization:'Bearer '+token}}); branchesTb.innerHTML=(r.branches||[]).map(x=>`<tr><td>${x.id}</td><td><input id='bc_${x.id}' value='${x.code}'></td><td><input id='bn_${x.id}' value='${x.name}'></td><td><input id='bl_${x.id}' value='${x.location}'></td><td><select id='ba_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td><td><button class='ghost' onclick='updBranch(${x.id})'>تعديل</button> <button class='danger' onclick='delBranch(${x.id})'>حذف</button></td></tr>`).join(''); }
-async function addBranch(){ await fetch('/api/admin/branches',{method:'POST',headers:h(),body:JSON.stringify({code:b_code.value,name:b_name.value,location:b_loc.value})}); loadBranches(); }
-async function updBranch(id){ await fetch('/api/admin/branches/'+id,{method:'PUT',headers:h(),body:JSON.stringify({code:document.getElementById('bc_'+id).value,name:document.getElementById('bn_'+id).value,location:document.getElementById('bl_'+id).value,active:Number(document.getElementById('ba_'+id).value)})}); loadBranches(); }
-async function delBranch(id){ await fetch('/api/admin/branches/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}}); loadBranches(); }
-
-async function loadCompanies(){ const r=await j('/api/admin/companies',{headers:{Authorization:'Bearer '+token}}); companiesTb.innerHTML=(r.companies||[]).map(x=>`<tr><td>${x.id}</td><td><input id='cn_${x.id}' value='${x.name}'></td><td><input id='cd_${x.id}' value='${x.description||''}'></td><td><select id='ca_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td><td><button class='ghost' onclick='updCompany(${x.id})'>تعديل</button> <button class='danger' onclick='delCompany(${x.id})'>حذف</button></td></tr>`).join(''); }
-async function addCompany(){ await fetch('/api/admin/companies',{method:'POST',headers:h(),body:JSON.stringify({name:c_name.value,description:c_desc.value})}); loadCompanies(); }
-async function updCompany(id){ await fetch('/api/admin/companies/'+id,{method:'PUT',headers:h(),body:JSON.stringify({name:document.getElementById('cn_'+id).value,description:document.getElementById('cd_'+id).value,active:Number(document.getElementById('ca_'+id).value)})}); loadCompanies(); }
-async function delCompany(id){ await fetch('/api/admin/companies/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}}); loadCompanies(); }
-
-async function loadDays(){ const r=await j('/api/admin/business-days',{headers:{Authorization:'Bearer '+token}}); daysTb.innerHTML=(r.business_days||[]).map(x=>`<tr><td>${x.id}</td><td><input id='db_${x.id}' value='${x.branch_id}' ${role==='branch_employee'?'disabled':''}></td><td><input id='dd_${x.id}' value='${x.day_name}'></td><td><input id='ds_${x.id}' value='${x.start_time}'></td><td><input id='de_${x.id}' value='${x.end_time}'></td><td><input id='di_${x.id}' value='${x.interval_minutes}'></td><td><select id='da_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td><td><button class='ghost' onclick='updDay(${x.id})'>تعديل</button> <button class='danger' onclick='delDay(${x.id})'>حذف</button></td></tr>`).join(''); }
-async function addBusinessDay(){ const payload={branch_id:Number(role==='branch_employee'?myBranchId:d_branch.value),day_name:d_name.value,start_time:d_start.value,end_time:d_end.value,interval_minutes:Number(d_int.value||60),active:1}; await fetch('/api/admin/business-days',{method:'POST',headers:h(),body:JSON.stringify(payload)}); loadDays(); }
-async function updDay(id){ const payload={branch_id:Number(role==='branch_employee'?myBranchId:document.getElementById('db_'+id).value),day_name:document.getElementById('dd_'+id).value,start_time:document.getElementById('ds_'+id).value,end_time:document.getElementById('de_'+id).value,interval_minutes:Number(document.getElementById('di_'+id).value||60),active:Number(document.getElementById('da_'+id).value)}; await fetch('/api/admin/business-days/'+id,{method:'PUT',headers:h(),body:JSON.stringify(payload)}); loadDays(); }
-async function delDay(id){ await fetch('/api/admin/business-days/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}}); loadDays(); }
+function showSection(name){['appts','branches','companies','days'].forEach(k=>{document.getElementById('sec-'+k).classList.toggle('active',k===name);document.getElementById('tab-'+k).classList.toggle('active',k===name)});if(role!=='admin'&&(name==='branches'||name==='companies'))showSection('appts');}
+async function login(){const r=await j('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:u.value,password:p.value})});if(!r.token)return alert(r.error||'login failed');token=r.token;role=r.role;myBranchId=r.branch_id;loginCard.classList.add('hide');panel.classList.remove('hide');if(role!=='admin'){document.getElementById('tab-branches').style.display='none';document.getElementById('tab-companies').style.display='none';d_branch.value=myBranchId||'';}await loadAppointments();if(role==='admin'){await loadBranches();await loadCompanies();}await loadDays();}
+async function loadAppointments(){const q=[];if(f.value)q.push('branch_id='+encodeURIComponent(f.value));if(d.value)q.push('day_name='+encodeURIComponent(d.value));const r=await j('/api/admin/appointments'+(q.length?'?'+q.join('&'):''),{headers:{Authorization:'Bearer '+token}});tb.innerHTML=(r.appointments||[]).map(x=>`<tr><td>${x.id}</td><td>${x.branch_name}</td><td>${x.company_name}</td><td>${x.day_name}</td><td>${x.slot_time}</td><td>${x.phone}</td><td>${x.status}</td><td>${role==='admin'?`<button class="danger" onclick="delAppt(${x.id})">حذف</button>`:''}</td></tr>`).join('');}
+async function delAppt(id){await fetch('/api/admin/appointments/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});loadAppointments();}
+async function loadBranches(){const r=await j('/api/admin/branches',{headers:{Authorization:'Bearer '+token}});branchesTb.innerHTML=(r.branches||[]).map(x=>`<tr><td>${x.id}</td><td><input id='bc_${x.id}' value='${x.code}'></td><td><input id='bn_${x.id}' value='${x.name}'></td><td><input id='bl_${x.id}' value='${x.location}'></td><td><select id='ba_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td><td><button class='ghost' onclick='updBranch(${x.id})'>تعديل</button> <button class='danger' onclick='delBranch(${x.id})'>حذف</button></td></tr>`).join('');}
+async function addBranch(){await fetch('/api/admin/branches',{method:'POST',headers:h(),body:JSON.stringify({code:b_code.value,name:b_name.value,location:b_loc.value})});loadBranches();}
+async function updBranch(id){await fetch('/api/admin/branches/'+id,{method:'PUT',headers:h(),body:JSON.stringify({code:document.getElementById('bc_'+id).value,name:document.getElementById('bn_'+id).value,location:document.getElementById('bl_'+id).value,active:Number(document.getElementById('ba_'+id).value)})});loadBranches();}
+async function delBranch(id){await fetch('/api/admin/branches/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});loadBranches();}
+async function loadCompanies(){const r=await j('/api/admin/companies',{headers:{Authorization:'Bearer '+token}});companiesTb.innerHTML=(r.companies||[]).map(x=>`<tr><td>${x.id}</td><td><input id='cn_${x.id}' value='${x.name}'></td><td><input id='cd_${x.id}' value='${x.description||''}'></td><td><select id='ca_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td><td><button class='ghost' onclick='updCompany(${x.id})'>تعديل</button> <button class='danger' onclick='delCompany(${x.id})'>حذف</button></td></tr>`).join('');}
+async function addCompany(){await fetch('/api/admin/companies',{method:'POST',headers:h(),body:JSON.stringify({name:c_name.value,description:c_desc.value})});loadCompanies();}
+async function updCompany(id){await fetch('/api/admin/companies/'+id,{method:'PUT',headers:h(),body:JSON.stringify({name:document.getElementById('cn_'+id).value,description:document.getElementById('cd_'+id).value,active:Number(document.getElementById('ca_'+id).value)})});loadCompanies();}
+async function delCompany(id){await fetch('/api/admin/companies/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});loadCompanies();}
+async function loadDays(){const r=await j('/api/admin/business-days',{headers:{Authorization:'Bearer '+token}});daysTb.innerHTML=(r.business_days||[]).map(x=>`<tr><td>${x.id}</td><td><input id='db_${x.id}' value='${x.branch_id}' ${role==='branch_employee'?'disabled':''}></td><td><input id='dd_${x.id}' value='${x.day_name}'></td><td><input id='ds_${x.id}' value='${x.start_time}'></td><td><input id='de_${x.id}' value='${x.end_time}'></td><td><input id='di_${x.id}' value='${x.interval_minutes}'></td><td><select id='da_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td><td><button class='ghost' onclick='updDay(${x.id})'>تعديل</button> <button class='danger' onclick='delDay(${x.id})'>حذف</button></td></tr>`).join('');}
+async function addBusinessDay(){const payload={branch_id:Number(role==='branch_employee'?myBranchId:d_branch.value),day_name:d_name.value,start_time:d_start.value,end_time:d_end.value,interval_minutes:Number(d_int.value||60),active:1};await fetch('/api/admin/business-days',{method:'POST',headers:h(),body:JSON.stringify(payload)});loadDays();}
+async function updDay(id){const payload={branch_id:Number(role==='branch_employee'?myBranchId:document.getElementById('db_'+id).value),day_name:document.getElementById('dd_'+id).value,start_time:document.getElementById('ds_'+id).value,end_time:document.getElementById('de_'+id).value,interval_minutes:Number(document.getElementById('di_'+id).value||60),active:Number(document.getElementById('da_'+id).value)};await fetch('/api/admin/business-days/'+id,{method:'PUT',headers:h(),body:JSON.stringify(payload)});loadDays();}
+async function delDay(id){await fetch('/api/admin/business-days/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});loadDays();}
 </script>
 </body>
 </html>
