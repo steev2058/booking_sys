@@ -79,7 +79,7 @@
       <div id="slots" class="slots"></div>
 
       <div class="captcha-wrap">
-        <span id="captchaQ" class="captcha-chip"></span>
+        <img id="captchaImg" class="captcha-chip" alt="captcha" style="height:80px;width:240px;object-fit:cover;border:1px solid #d4b0ba;border-radius:12px" />
         <button class="alt" onclick="refreshCaptcha()">تحديث</button>
         <input id="captchaA" placeholder="ادخل الرمز في الصورة" style="max-width:220px">
       </div>
@@ -105,7 +105,7 @@ async function j(url, options){ const r=await fetch(url, options); return await 
 
 async function refreshCaptcha(){
   const cap=await j('/api/captcha');
-  captchaQ.textContent=cap.challenge;
+  captchaImg.src=cap.image;
   captchaToken=cap.token;
 }
 

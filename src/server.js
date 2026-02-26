@@ -59,8 +59,36 @@ function createCaptcha() {
   const chars = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
   let code = '';
   for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+
+  const palette = ['#2e2e2e', '#5a7dbf', '#7f2f6d', '#2d8f6f', '#b86a1d'];
+  const letters = code.split('').map((ch, i) => {
+    const x = 34 + i * 42;
+    const y = 46 + (Math.random() * 6 - 3);
+    const rot = Math.floor(Math.random() * 24 - 12);
+    const col = palette[Math.floor(Math.random() * palette.length)];
+    return `<text x="${x}" y="${y}" transform="rotate(${rot} ${x} ${y})" font-size="34" font-family="Tahoma, Arial" font-weight="700" fill="${col}">${ch}</text>`;
+  }).join('');
+
+  const lines = Array.from({ length: 4 }).map(() => {
+    const x1 = Math.floor(Math.random() * 240);
+    const y1 = Math.floor(Math.random() * 80);
+    const x2 = Math.floor(Math.random() * 240);
+    const y2 = Math.floor(Math.random() * 80);
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#6b6b6b" stroke-width="1" opacity="0.45" />`;
+  }).join('');
+
+  const dots = Array.from({ length: 22 }).map(() => {
+    const cx = Math.floor(Math.random() * 240);
+    const cy = Math.floor(Math.random() * 80);
+    const r = Math.random() * 1.4 + 0.4;
+    return `<circle cx="${cx}" cy="${cy}" r="${r.toFixed(2)}" fill="#8c8c8c" opacity="0.35" />`;
+  }).join('');
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="80" viewBox="0 0 240 80"><rect width="240" height="80" rx="12" fill="#e5c6cf"/>${lines}${dots}${letters}</svg>`;
+  const image = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+
   const token = Buffer.from(`${code}:${Date.now() + 2 * 60 * 1000}`).toString('base64');
-  return { code, token };
+  return { code, token, image };
 }
 
 function verifyCaptcha(answer, token) {
@@ -162,7 +190,7 @@ app.get('/api/slots', (req, res) => {
 
 app.get('/api/captcha', (_req, res) => {
   const c = createCaptcha();
-  res.json({ challenge: c.code.split('').join(' '), token: c.token, hint: 'اكتب الأحرف/الأرقام بدون فراغات' });
+  res.json({ image: c.image, token: c.token, hint: 'ادخل الرموز في الصورة' });
 });
 
 app.post('/api/send-otp', async (req, res) => {
