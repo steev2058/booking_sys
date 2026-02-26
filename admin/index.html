@@ -1,7 +1,112 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>لوحة التحكم</title><style>body{font-family:Arial;background:#f6f7fb}.w{max-width:1000px;margin:20px auto}.c{background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:6px}button{padding:6px 10px}</style></head><body><div class="w"><div class="c"><h2>لوحة إدارة مواعيد الحوالات</h2><div id="login"><input id="u" placeholder="username"> <input id="p" type="password" placeholder="password"> <button onclick="login()">دخول</button><p>افتراضي: admin/admin1234</p></div><div id="panel" style="display:none"><label>الفرع</label><input id="f"> <label>اليوم</label><input id="d"> <button onclick="load()">فلترة</button><table><thead><tr><th>ID</th><th>الفرع</th><th>الشركة</th><th>اليوم</th><th>الوقت</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="tb"></tbody></table></div></div></div><script>
-let token='';let role='';
-async function j(u,o){const r=await fetch(u,o);return await r.json()}
-async function login(){const r=await j('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:u.value,password:p.value})});if(r.token){token=r.token;role=r.role;login.style='display:none';panel.style.display='block';load();}else alert(r.error||'fail')}
-async function load(){const q=[];if(f.value)q.push('branch_id='+encodeURIComponent(f.value));if(d.value)q.push('day_name='+encodeURIComponent(d.value));const r=await j('/api/admin/appointments'+(q.length?'?'+q.join('&'):''),{headers:{Authorization:'Bearer '+token}});tb.innerHTML=(r.appointments||[]).map(x=>`<tr><td>${x.id}</td><td>${x.branch_name}</td><td>${x.company_name}</td><td>${x.day_name}</td><td>${x.slot_time}</td><td>${x.phone}</td><td>${x.status}</td><td>${role==='admin'?`<button onclick="del(${x.id})">حذف</button>`:''}</td></tr>`).join('')}
-async function del(id){await fetch('/api/admin/appointments/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});load()}
-</script></body></html>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>لوحة التحكم - بنك البركة</title>
+  <style>
+    body{font-family:Tahoma,Arial;background:#f1f4f9;margin:0;color:#173250}
+    .wrap{max-width:1200px;margin:18px auto;padding:0 12px}
+    .card{background:#fff;border:1px solid #d6e1ee;border-radius:12px;padding:14px;margin-bottom:12px}
+    input,select,textarea{padding:8px;border:1px solid #c8d6e7;border-radius:8px;width:100%}
+    button{padding:8px 12px;border:0;border-radius:8px;background:#0d4b8e;color:#fff;cursor:pointer}
+    table{width:100%;border-collapse:collapse} th,td{border:1px solid #dde6f2;padding:6px;text-align:right}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .col{flex:1;min-width:160px}
+    .hide{display:none}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="loginCard">
+    <h3>تسجيل دخول لوحة التحكم</h3>
+    <div class="row">
+      <div class="col"><input id="u" placeholder="username"></div>
+      <div class="col"><input id="p" type="password" placeholder="password"></div>
+      <button onclick="login()">دخول</button>
+    </div>
+    <small>افتراضي: admin/admin1234</small>
+  </div>
+
+  <div id="panel" class="hide">
+    <div class="card">
+      <h3>المواعيد</h3>
+      <div class="row">
+        <div class="col"><input id="f" placeholder="فلترة branch_id"></div>
+        <div class="col"><input id="d" placeholder="فلترة day_name"></div>
+        <button onclick="loadAppointments()">فلترة</button>
+      </div>
+      <table><thead><tr><th>ID</th><th>الفرع</th><th>الشركة</th><th>اليوم</th><th>الوقت</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="tb"></tbody></table>
+    </div>
+
+    <div id="adminOnly" class="hide">
+      <div class="card">
+        <h3>إدارة الفروع</h3>
+        <div class="row">
+          <div class="col"><input id="b_code" placeholder="رمز الفرع"></div>
+          <div class="col"><input id="b_name" placeholder="اسم الفرع"></div>
+          <div class="col"><input id="b_loc" placeholder="الموقع"></div>
+          <button onclick="addBranch()">إضافة</button>
+        </div>
+        <table><thead><tr><th>ID</th><th>Code</th><th>Name</th><th>Location</th><th>Active</th></tr></thead><tbody id="branchesTb"></tbody></table>
+      </div>
+
+      <div class="card">
+        <h3>إدارة شركات الحوالات</h3>
+        <div class="row">
+          <div class="col"><input id="c_name" placeholder="اسم الشركة"></div>
+          <div class="col"><input id="c_desc" placeholder="الوصف"></div>
+          <button onclick="addCompany()">إضافة</button>
+        </div>
+        <table><thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Active</th></tr></thead><tbody id="companiesTb"></tbody></table>
+      </div>
+
+      <div class="card">
+        <h3>إدارة أيام الدوام</h3>
+        <div class="row">
+          <div class="col"><input id="d_branch" placeholder="branch_id"></div>
+          <div class="col"><input id="d_name" placeholder="day_name"></div>
+          <div class="col"><input id="d_start" placeholder="09:00"></div>
+          <div class="col"><input id="d_end" placeholder="15:00"></div>
+          <div class="col"><input id="d_int" placeholder="60"></div>
+          <button onclick="addBusinessDay()">إضافة</button>
+        </div>
+        <table><thead><tr><th>ID</th><th>Branch</th><th>Day</th><th>Start</th><th>End</th><th>Interval</th><th>Active</th></tr></thead><tbody id="daysTb"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let token=''; let role='';
+async function j(u,o={}){const r=await fetch(u,o);return await r.json()}
+const h=()=>({Authorization:'Bearer '+token,'content-type':'application/json'});
+
+async function login(){
+  const r=await j('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:u.value,password:p.value})});
+  if(!r.token) return alert(r.error||'login failed');
+  token=r.token; role=r.role;
+  loginCard.classList.add('hide'); panel.classList.remove('hide');
+  if(role==='admin') adminOnly.classList.remove('hide');
+  await loadAppointments();
+  if(role==='admin'){ await loadBranches(); await loadCompanies(); await loadDays(); }
+}
+
+async function loadAppointments(){
+  const q=[]; if(f.value) q.push('branch_id='+encodeURIComponent(f.value)); if(d.value) q.push('day_name='+encodeURIComponent(d.value));
+  const r=await j('/api/admin/appointments'+(q.length?'?'+q.join('&'):''),{headers:{Authorization:'Bearer '+token}});
+  tb.innerHTML=(r.appointments||[]).map(x=>`<tr><td>${x.id}</td><td>${x.branch_name}</td><td>${x.company_name}</td><td>${x.day_name}</td><td>${x.slot_time}</td><td>${x.phone}</td><td>${x.status}</td><td>${role==='admin'?`<button onclick="delAppt(${x.id})">حذف</button>`:''}</td></tr>`).join('');
+}
+async function delAppt(id){ await fetch('/api/admin/appointments/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}}); loadAppointments(); }
+
+async function loadBranches(){ const r=await j('/api/admin/branches',{headers:{Authorization:'Bearer '+token}}); branchesTb.innerHTML=(r.branches||[]).map(x=>`<tr><td>${x.id}</td><td>${x.code}</td><td>${x.name}</td><td>${x.location}</td><td>${x.active}</td></tr>`).join(''); }
+async function addBranch(){ await fetch('/api/admin/branches',{method:'POST',headers:h(),body:JSON.stringify({code:b_code.value,name:b_name.value,location:b_loc.value})}); loadBranches(); }
+
+async function loadCompanies(){ const r=await j('/api/admin/companies',{headers:{Authorization:'Bearer '+token}}); companiesTb.innerHTML=(r.companies||[]).map(x=>`<tr><td>${x.id}</td><td>${x.name}</td><td>${x.description||''}</td><td>${x.active}</td></tr>`).join(''); }
+async function addCompany(){ await fetch('/api/admin/companies',{method:'POST',headers:h(),body:JSON.stringify({name:c_name.value,description:c_desc.value})}); loadCompanies(); }
+
+async function loadDays(){ const r=await j('/api/admin/business-days',{headers:{Authorization:'Bearer '+token}}); daysTb.innerHTML=(r.business_days||[]).map(x=>`<tr><td>${x.id}</td><td>${x.branch_id}</td><td>${x.day_name}</td><td>${x.start_time}</td><td>${x.end_time}</td><td>${x.interval_minutes}</td><td>${x.active}</td></tr>`).join(''); }
+async function addBusinessDay(){ await fetch('/api/admin/business-days',{method:'POST',headers:h(),body:JSON.stringify({branch_id:Number(d_branch.value),day_name:d_name.value,start_time:d_start.value,end_time:d_end.value,interval_minutes:Number(d_int.value||60),active:1})}); loadDays(); }
+</script>
+</body>
+</html>
