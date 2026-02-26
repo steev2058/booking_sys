@@ -3,91 +3,166 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>منصة حجز دور استلام حوالة - بنك البركة</title>
+  <title>خدمة حجز موعد - بنك البركة</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root{--navy:#163a66;--navy2:#0f2f56;--red:#c8102e;--orange:#f57c00;--bg:#f3f6fb;--line:#d7e2f0;--text:#1f3550;--ok:#e9f8ef;--okT:#106a3b;--bad:#fdecef;--badT:#a11932}
-    *{box-sizing:border-box}
-    body{font-family:'Cairo',Tahoma,Arial;background:var(--bg);margin:0;color:var(--text)}
-    .top{background:linear-gradient(90deg,var(--navy),var(--navy2));color:#fff;padding:12px 20px}
-    .top-wrap{max-width:1080px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
-    .logo{height:58px;background:#fff;border-radius:10px;padding:6px}
-    .wrap{max-width:1080px;margin:20px auto;padding:0 12px}
-    .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 8px 30px rgba(12,45,89,.06)}
-    .steps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-    .step{padding:7px 11px;border-radius:999px;border:1px solid #c6d7ee;background:#fff;color:#36557b;font-weight:700;font-size:13px}
-    .step.active{background:#e8f0ff;border-color:#6a93d6;color:#133c72}
-    .accent{height:4px;background:linear-gradient(90deg,var(--orange),var(--red));border-radius:99px;margin-bottom:14px}
-    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-    .panel{display:none}.panel.active{display:block}
-    label{display:block;font-size:13px;margin-bottom:5px;font-weight:700}
-    input,select{width:100%;padding:11px;border:1px solid #c7d7ec;border-radius:10px}
-    .slots{display:grid;grid-template-columns:repeat(6,minmax(90px,1fr));gap:8px}
-    .slot{padding:10px;border-radius:9px;border:1px solid #c2d0e2;text-align:center;cursor:pointer;background:var(--ok);color:var(--okT);font-weight:800}
-    .slot.na{background:var(--bad);color:var(--badT);cursor:not-allowed}.slot.sel{outline:3px solid #2d6cdf}
-    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-    button{padding:10px 14px;border:0;border-radius:9px;background:var(--navy);color:#fff;cursor:pointer;font-weight:700}
-    button.ghost{background:#eef4ff;color:#0d4b8e}
-    .msg{margin-top:10px;font-weight:800}
-    @media (max-width:920px){.grid{grid-template-columns:1fr}.slots{grid-template-columns:repeat(3,minmax(80px,1fr))}}
+    :root{--blue:#0f4f95;--blue2:#0d3f76;--burg:#8d1e33;--ink:#21344a;--line:#1f5f93;--bg:#f7f8fb}
+    *{box-sizing:border-box} body{font-family:'Cairo',sans-serif;background:var(--bg);margin:0;color:var(--ink)}
+    .top{background:#fff;border-bottom:6px solid #1e1f23;position:sticky;top:0;z-index:5}
+    .top-in{max-width:1180px;margin:auto;display:flex;align-items:center;justify-content:space-between;padding:10px 14px}
+    .logo{height:52px}
+    .service{background:linear-gradient(120deg,#c02a46,var(--burg));color:#fff;padding:10px 18px;border-radius:0 0 0 28px;font-weight:800}
+
+    .main{max-width:1180px;margin:18px auto;padding:0 14px}
+    .hero{text-align:center;margin:8px 0 20px}
+    .hero h1{margin:0;font-size:42px;color:#2a4f7a;font-weight:800;letter-spacing:.5px}
+    .hero p{margin:6px 0 0;color:#4d6885;font-weight:700}
+
+    .card{background:#fff;border:1px solid #e3e9f2;border-radius:16px;padding:16px;box-shadow:0 10px 24px rgba(20,45,78,.06)}
+
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    label{display:block;margin:4px 2px 5px;color:#1e446a;font-weight:700}
+    input,select{width:100%;padding:12px;border:2px solid #2d6e9f;border-radius:14px;background:#fff;font-weight:700}
+
+    .day-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .chip{padding:9px 14px;border:2px solid #2d6e9f;border-radius:14px;background:#fff;cursor:pointer;font-weight:800}
+    .chip.active{background:var(--blue);border-color:var(--blue);color:#fff}
+
+    .slots-title{margin:18px 0 8px;font-weight:800;color:#2a4f7a}
+    .slots{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:12px}
+    .slot{padding:14px;border:2px solid #2d6e9f;border-radius:14px;background:#fff;font-weight:800;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+    .slot.na{background:#f8dfe3;border-color:#d2919d;color:#96253a;cursor:not-allowed}
+    .slot.sel{background:var(--blue);border-color:var(--blue);color:#fff}
+
+    .captcha-wrap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+    .captcha-chip{padding:10px 16px;background:#f4d6dc;border-radius:10px;font-weight:800;letter-spacing:2px;color:#6b1f32}
+
+    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    button{padding:11px 14px;border:0;border-radius:11px;background:var(--blue);color:#fff;font-weight:800;cursor:pointer}
+    button.alt{background:#eef4ff;color:#12457a}
+    #otp{max-width:170px}
+
+    .msg{margin-top:8px;font-weight:800;min-height:22px}
+    .footer{margin-top:14px;background:var(--burg);color:#fff;text-align:center;padding:8px;border-radius:8px;font-weight:700}
+
+    @media (max-width:900px){.grid{grid-template-columns:1fr}.slots{grid-template-columns:1fr}.hero h1{font-size:34px}}
   </style>
 </head>
 <body>
-<div class="top"><div class="top-wrap"><h1>منصة حجز دور استلام حوالة - بنك البركة</h1><img class="logo" src="/albaraka-logo.jpg" alt="logo"></div></div>
-<div class="wrap"><div class="card">
-  <div class="steps">
-    <div id="s1" class="step active">1) بيانات الحوالة</div>
-    <div id="s2" class="step">2) اختيار الموعد</div>
-    <div id="s3" class="step">3) التحقق والتأكيد</div>
-  </div>
-  <div class="accent"></div>
-
-  <div id="p1" class="panel active">
-    <div class="grid">
-      <div><label>رقم الحوالة</label><input id="transfer"></div>
-      <div><label>رقم الهاتف</label><input id="phone" placeholder="09xxxxxxxx"></div>
-      <div><label>الفرع</label><select id="branch"></select></div>
-      <div><label>شركة الحوالات</label><select id="company"></select></div>
-    </div>
-    <div class="actions"><button onclick="nextStep(2)">التالي</button></div>
-  </div>
-
-  <div id="p2" class="panel">
-    <div class="grid"><div><label>اليوم</label><select id="day"></select></div></div>
-    <h3>الأوقات المتاحة</h3>
-    <div class="slots" id="slots"></div>
-    <div class="actions"><button class="ghost" onclick="nextStep(1)">رجوع</button><button onclick="nextStep(3)">التالي</button></div>
-  </div>
-
-  <div id="p3" class="panel">
-    <label>CAPTCHA</label>
-    <div class="actions"><b id="captchaQ"></b><button class="ghost" onclick="refreshCaptcha()">تحديث</button></div>
-    <input id="captchaA" placeholder="اكتب رمز التحقق">
-    <div class="actions">
-      <button onclick="sendOtp()">إرسال رمز 4 خانات</button>
-      <input id="otp" placeholder="أدخل الرمز" style="max-width:190px">
-      <button onclick="book()">تأكيد الحجز</button>
-      <button class="ghost" onclick="nextStep(2)">رجوع</button>
+  <div class="top">
+    <div class="top-in">
+      <img src="/albaraka-logo.jpg" class="logo" alt="logo"/>
+      <div class="service">خدمة حجز موعد</div>
     </div>
   </div>
 
-  <div class="msg" id="msg"></div>
-</div></div>
+  <div class="main">
+    <div class="hero">
+      <h1>خدمة حجز موعد</h1>
+      <p>الرجاء تعبئة الحقول التالية لحجز موعد استلام حوالتك</p>
+    </div>
+
+    <div class="card">
+      <div class="grid">
+        <div><label>رقم الحوالة</label><input id="transfer"></div>
+        <div><label>رقم الهاتف</label><input id="phone" placeholder="09xxxxxxxx"></div>
+        <div><label>الفرع</label><select id="branch"></select></div>
+        <div><label>شركة الحوالات</label><select id="company"></select></div>
+      </div>
+
+      <label style="margin-top:10px">اختر اليوم</label>
+      <div id="days" class="day-chips"></div>
+
+      <div class="slots-title">اختر الوقت</div>
+      <div id="slots" class="slots"></div>
+
+      <div class="captcha-wrap">
+        <span id="captchaQ" class="captcha-chip"></span>
+        <button class="alt" onclick="refreshCaptcha()">تحديث</button>
+        <input id="captchaA" placeholder="ادخل الرمز في الصورة" style="max-width:220px">
+      </div>
+
+      <div class="actions">
+        <button onclick="sendOtp()">إرسال رمز 4 خانات</button>
+        <input id="otp" placeholder="ادخل الرمز">
+        <button onclick="book()">تأكيد الحجز</button>
+      </div>
+      <div id="msg" class="msg"></div>
+    </div>
+
+    <div class="footer">جميع الحقوق محفوظة لبنك البركة © 2026</div>
+  </div>
 
 <script>
-let captchaToken='',selectedSlot='',step=1;
-const setStep=()=>{['p1','p2','p3'].forEach((x,i)=>document.getElementById(x).classList.toggle('active',i+1===step));['s1','s2','s3'].forEach((x,i)=>document.getElementById(x).classList.toggle('active',i+1===step));}
-function nextStep(n){if(n===2 && (!transfer.value||!phone.value)){msg.style.color='#b00020';msg.textContent='يرجى تعبئة رقم الحوالة والهاتف';return;}if(n===3 && !selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';return;}step=n;setStep();}
-async function j(u,o){const r=await fetch(u,o);return await r.json()}
-async function refreshCaptcha(){const cap=await j('/api/captcha');captchaQ.textContent=cap.challenge;captchaToken=cap.token}
-async function init(){const b=await j('/api/branches');branch.innerHTML=b.branches.map(x=>`<option value="${x.id}">${x.name} (${x.code}) - ${x.location}</option>`).join('');const c=await j('/api/companies');company.innerHTML=c.companies.map(x=>`<option value="${x.id}">${x.name}${x.description?` - ${x.description}`:''}</option>`).join('');await refreshCaptcha();await loadDays();}
-async function loadDays(){const d=await j('/api/business-days?branch_id='+branch.value);day.innerHTML=d.days.map(x=>`<option value="${x.day_name}">${x.day_name} (${x.start_time}-${x.end_time}, كل ${x.interval_minutes} دقيقة)</option>`).join('');await loadSlots()}
-async function loadSlots(){selectedSlot='';const s=await j(`/api/slots?branch_id=${branch.value}&day_name=${encodeURIComponent(day.value)}`);slots.innerHTML=s.slots.map(x=>`<div class="slot ${x.available?'':'na'}" data-time="${x.time}">${x.time}</div>`).join('');document.querySelectorAll('.slot:not(.na)').forEach(el=>el.onclick=()=>{document.querySelectorAll('.slot').forEach(a=>a.classList.remove('sel'));el.classList.add('sel');selectedSlot=el.dataset.time;});}
-branch.onchange=loadDays;day.onchange=loadSlots;
-async function sendOtp(){const r=await j('/api/send-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:phone.value,transfer_number:transfer.value,captcha_answer:captchaA.value,captcha_token:captchaToken})});msg.style.color=r.ok?'#106a3b':'#b00020';msg.textContent=r.message||r.error||'خطأ غير متوقع';if(!r.ok)await refreshCaptcha();}
-async function book(){const r=await j('/api/book',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({transfer_number:transfer.value,branch_id:branch.value,company_id:company.value,day_name:day.value,slot_time:selectedSlot,phone:phone.value,otp_code:otp.value})});msg.style.color=r.success?'#106a3b':'#b00020';msg.textContent=r.message||r.error||'خطأ غير متوقع';if(r.success){await loadSlots();step=1;setStep();}}
+let captchaToken='';
+let selectedSlot='';
+let selectedDay='';
+let daysConfig=[];
+
+async function j(url, options){ const r=await fetch(url, options); return await r.json(); }
+
+async function refreshCaptcha(){
+  const cap=await j('/api/captcha');
+  captchaQ.textContent=cap.challenge;
+  captchaToken=cap.token;
+}
+
+async function init(){
+  const b=await j('/api/branches');
+  branch.innerHTML=b.branches.map(x=>`<option value="${x.id}">${x.name} (${x.code}) - ${x.location}</option>`).join('');
+  const c=await j('/api/companies');
+  company.innerHTML=c.companies.map(x=>`<option value="${x.id}">${x.name}${x.description?` - ${x.description}`:''}</option>`).join('');
+  await refreshCaptcha();
+  await loadDays();
+}
+
+async function loadDays(){
+  const d=await j('/api/business-days?branch_id='+branch.value);
+  daysConfig=d.days||[];
+  selectedDay='';
+  days.innerHTML=daysConfig.map((x,i)=>`<div class="chip ${i===0?'active':''}" data-day="${x.day_name}">${x.day_name}</div>`).join('');
+  const first=daysConfig[0];
+  if(first) selectedDay=first.day_name;
+  document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active');
+    selectedDay=el.dataset.day;
+    loadSlots();
+  });
+  await loadSlots();
+}
+
+async function loadSlots(){
+  selectedSlot='';
+  if(!selectedDay){slots.innerHTML='';return;}
+  const s=await j(`/api/slots?branch_id=${branch.value}&day_name=${encodeURIComponent(selectedDay)}`);
+  slots.innerHTML=(s.slots||[]).map(x=>`<div class="slot ${x.available?'':'na'}" data-time="${x.time}"><span>⏱</span><span>متاح من توقيت ${x.time}</span></div>`).join('');
+  document.querySelectorAll('.slot:not(.na)').forEach(el=>el.onclick=()=>{
+    document.querySelectorAll('.slot').forEach(a=>a.classList.remove('sel'));
+    el.classList.add('sel');
+    selectedSlot=el.dataset.time;
+  });
+}
+
+branch.onchange=loadDays;
+
+async function sendOtp(){
+  const r=await j('/api/send-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:phone.value,transfer_number:transfer.value,captcha_answer:captchaA.value,captcha_token:captchaToken})});
+  msg.style.color=r.ok?'#106a3b':'#b00020';
+  msg.textContent=r.message||r.error||'خطأ غير متوقع';
+  if(!r.ok) await refreshCaptcha();
+}
+
+async function book(){
+  if(!selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';return;}
+  const r=await j('/api/book',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({transfer_number:transfer.value,branch_id:branch.value,company_id:company.value,day_name:selectedDay,slot_time:selectedSlot,phone:phone.value,otp_code:otp.value})});
+  msg.style.color=r.success?'#106a3b':'#b00020';
+  msg.textContent=r.message||r.error||'خطأ غير متوقع';
+  if(r.success) await loadSlots();
+}
+
 init();
 </script>
 </body>
