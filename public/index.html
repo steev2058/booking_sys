@@ -8,161 +8,117 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root{--blue:#0f4f95;--blue2:#0d3f76;--burg:#8d1e33;--ink:#21344a;--line:#1f5f93;--bg:#f7f8fb}
-    *{box-sizing:border-box} body{font-family:'Cairo',sans-serif;background:var(--bg);margin:0;color:var(--ink)}
-    .top{background:#fff;border-bottom:6px solid #1e1f23;position:sticky;top:0;z-index:5}
-    .top-in{max-width:1180px;margin:auto;display:flex;align-items:center;justify-content:space-between;padding:10px 14px}
+    :root{--orange:#f57c00;--red:#c62828;--gray:#546e7a;--light:#f5f6f8;--card:#fff;--line:#d7dbe2;--ink:#263238}
+    *{box-sizing:border-box}
+    body{font-family:'Cairo',sans-serif;background:var(--light);margin:0;color:var(--ink)}
+    .top{background:#fff;border-bottom:5px solid #2f2f2f}
+    .top-in{max-width:1120px;margin:auto;display:flex;align-items:center;justify-content:space-between;padding:10px 14px}
     .logo{height:52px}
-    .service{background:linear-gradient(120deg,#c02a46,var(--burg));color:#fff;padding:10px 18px;border-radius:0 0 0 28px;font-weight:800}
+    .service{background:linear-gradient(120deg,var(--orange),var(--red));color:#fff;padding:10px 18px;border-radius:0 0 0 26px;font-weight:800}
 
-    .main{max-width:1180px;margin:18px auto;padding:0 14px}
-    .hero{text-align:center;margin:8px 0 20px}
-    .hero h1{margin:0;font-size:42px;color:#2a4f7a;font-weight:800;letter-spacing:.5px}
-    .hero p{margin:6px 0 0;color:#4d6885;font-weight:700}
+    .wrap{max-width:1120px;margin:18px auto;padding:0 14px}
+    .hero{text-align:center;margin-bottom:12px}
+    .hero h1{margin:0;font-size:34px;color:#3d4c53;font-weight:800}
+    .hero p{margin:4px 0 0;color:#6b7c86;font-weight:700}
 
-    .card{background:#fff;border:1px solid #e3e9f2;border-radius:16px;padding:16px;box-shadow:0 10px 24px rgba(20,45,78,.06)}
+    .steps{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:14px}
+    .step{padding:10px 14px;border-radius:12px;border:2px solid #c9cfd6;background:#fff;color:#596b76;font-weight:800}
+    .step.active{background:linear-gradient(120deg,var(--orange),var(--red));border-color:transparent;color:#fff}
 
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    label{display:block;margin:4px 2px 5px;color:#1e446a;font-weight:700}
-    input,select{width:100%;padding:12px;border:2px solid #2d6e9f;border-radius:14px;background:#fff;font-weight:700}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 10px 22px rgba(0,0,0,.05)}
+    .section{display:none}.section.active{display:block}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    label{display:block;margin-bottom:5px;font-size:13px;font-weight:700;color:#485a64}
+    input,select{width:100%;padding:12px;border:2px solid #cfd8dc;border-radius:12px;background:#fff;font-weight:700}
+    input:focus,select:focus{outline:none;border-color:var(--orange)}
 
-    .day-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .chip{padding:9px 14px;border:2px solid #2d6e9f;border-radius:14px;background:#fff;cursor:pointer;font-weight:800}
-    .chip.active{background:var(--blue);border-color:var(--blue);color:#fff}
+    .day-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .chip{padding:9px 14px;border:2px solid #b0bec5;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;color:#546e7a}
+    .chip.active{background:var(--gray);border-color:var(--gray);color:#fff}
 
-    .slots-title{margin:18px 0 8px;font-weight:800;color:#2a4f7a}
-    .slots{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:12px}
-    .slot{padding:14px;border:2px solid #2d6e9f;border-radius:14px;background:#fff;font-weight:800;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
-    .slot.na{background:#f8dfe3;border-color:#d2919d;color:#96253a;cursor:not-allowed}
-    .slot.sel{background:var(--blue);border-color:var(--blue);color:#fff}
+    .slots{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:10px;margin-top:10px}
+    .slot{padding:13px;border-radius:12px;border:2px solid #cfd8dc;background:#fff;cursor:pointer;font-weight:800;display:flex;justify-content:space-between}
+    .slot.na{background:#ffe9e9;border-color:#ef9a9a;color:#a11d1d;cursor:not-allowed}
+    .slot.sel{background:#eceff1;border-color:#90a4ae}
 
     .captcha-wrap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
-    .captcha-chip{padding:10px 16px;background:#f4d6dc;border-radius:10px;font-weight:800;letter-spacing:2px;color:#6b1f32}
+    .captcha-img{height:80px;width:240px;border:1px solid #d4b0ba;border-radius:12px;background:#f2d5dc}
 
-    .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    button{padding:11px 14px;border:0;border-radius:11px;background:var(--blue);color:#fff;font-weight:800;cursor:pointer}
-    button.alt{background:#eef4ff;color:#12457a}
-    #otp{max-width:170px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    button{padding:10px 14px;border:0;border-radius:11px;background:linear-gradient(120deg,var(--orange),var(--red));color:#fff;font-weight:800;cursor:pointer}
+    button.alt{background:#eceff1;color:#455a64}
 
-    .msg{margin-top:8px;font-weight:800;min-height:22px}
-    .footer{margin-top:14px;background:var(--burg);color:#fff;text-align:center;padding:8px;border-radius:8px;font-weight:700}
+    .msg{margin-top:10px;font-weight:800;min-height:22px}
+    .footer{margin-top:12px;background:#455a64;color:#fff;text-align:center;padding:9px;border-radius:8px;font-weight:700}
 
-    @media (max-width:900px){.grid{grid-template-columns:1fr}.slots{grid-template-columns:1fr}.hero h1{font-size:34px}}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}.slots{grid-template-columns:1fr}.hero h1{font-size:28px}}
   </style>
 </head>
 <body>
-  <div class="top">
-    <div class="top-in">
-      <img src="/albaraka-logo.jpg" class="logo" alt="logo"/>
-      <div class="service">خدمة حجز موعد</div>
-    </div>
-  </div>
+  <div class="top"><div class="top-in"><img class="logo" src="/albaraka-logo.jpg" alt="logo"><div class="service">خدمة حجز موعد</div></div></div>
+  <div class="wrap">
+    <div class="hero"><h1>خدمة حجز موعد</h1><p>الرجاء اتباع الخطوات التالية لإتمام الحجز</p></div>
 
-  <div class="main">
-    <div class="hero">
-      <h1>خدمة حجز موعد</h1>
-      <p>الرجاء تعبئة الحقول التالية لحجز موعد استلام حوالتك</p>
+    <div class="steps">
+      <div id="s1" class="step active">1) بيانات الحوالة</div>
+      <div id="s2" class="step">2) اختيار اليوم والوقت</div>
+      <div id="s3" class="step">3) التحقق والتأكيد</div>
     </div>
 
     <div class="card">
-      <div class="grid">
-        <div><label>رقم الحوالة</label><input id="transfer"></div>
-        <div><label>رقم الهاتف</label><input id="phone" placeholder="09xxxxxxxx"></div>
-        <div><label>الفرع</label><select id="branch"></select></div>
-        <div><label>شركة الحوالات</label><select id="company"></select></div>
+      <div id="p1" class="section active">
+        <div class="grid">
+          <div><label>رقم الحوالة</label><input id="transfer"></div>
+          <div><label>رقم الهاتف</label><input id="phone" placeholder="09xxxxxxxx"></div>
+          <div><label>الفرع</label><select id="branch"></select></div>
+          <div><label>شركة الحوالات</label><select id="company"></select></div>
+        </div>
+        <div class="actions"><button onclick="nextStep(2)">التالي</button></div>
       </div>
 
-      <label style="margin-top:10px">اختر اليوم</label>
-      <div id="days" class="day-chips"></div>
+      <div id="p2" class="section">
+        <label>اختر اليوم</label>
+        <div id="days" class="day-chips"></div>
 
-      <div class="slots-title">اختر الوقت</div>
-      <div id="slots" class="slots"></div>
+        <label style="margin-top:12px">اختر الوقت</label>
+        <div id="slots" class="slots"></div>
 
-      <div class="captcha-wrap">
-        <img id="captchaImg" class="captcha-chip" alt="captcha" style="height:80px;width:240px;object-fit:cover;border:1px solid #d4b0ba;border-radius:12px" />
-        <button class="alt" onclick="refreshCaptcha()">تحديث</button>
-        <input id="captchaA" placeholder="ادخل الرمز في الصورة" style="max-width:220px">
+        <div class="actions"><button class="alt" onclick="nextStep(1)">رجوع</button><button onclick="nextStep(3)">التالي</button></div>
       </div>
 
-      <div class="actions">
-        <button onclick="sendOtp()">إرسال رمز 4 خانات</button>
-        <input id="otp" placeholder="ادخل الرمز">
-        <button onclick="book()">تأكيد الحجز</button>
+      <div id="p3" class="section">
+        <label>CAPTCHA</label>
+        <div class="captcha-wrap">
+          <img id="captchaImg" class="captcha-img" alt="captcha">
+          <button class="alt" onclick="refreshCaptcha()">تحديث</button>
+          <input id="captchaA" placeholder="ادخل الرمز في الصورة" style="max-width:220px">
+        </div>
+
+        <div class="actions">
+          <button onclick="sendOtp()">إرسال رمز 4 خانات</button>
+          <input id="otp" placeholder="ادخل الرمز" style="max-width:180px">
+          <button onclick="book()">تأكيد الحجز</button>
+          <button class="alt" onclick="nextStep(2)">رجوع</button>
+        </div>
       </div>
+
       <div id="msg" class="msg"></div>
     </div>
-
     <div class="footer">جميع الحقوق محفوظة لبنك البركة © 2026</div>
   </div>
 
 <script>
-let captchaToken='';
-let selectedSlot='';
-let selectedDay='';
-let daysConfig=[];
-
-async function j(url, options){ const r=await fetch(url, options); return await r.json(); }
-
-async function refreshCaptcha(){
-  const cap=await j('/api/captcha');
-  captchaImg.src=cap.image;
-  captchaToken=cap.token;
-}
-
-async function init(){
-  const b=await j('/api/branches');
-  branch.innerHTML=b.branches.map(x=>`<option value="${x.id}">${x.name} (${x.code}) - ${x.location}</option>`).join('');
-  const c=await j('/api/companies');
-  company.innerHTML=c.companies.map(x=>`<option value="${x.id}">${x.name}${x.description?` - ${x.description}`:''}</option>`).join('');
-  await refreshCaptcha();
-  await loadDays();
-}
-
-async function loadDays(){
-  const d=await j('/api/business-days?branch_id='+branch.value);
-  daysConfig=d.days||[];
-  selectedDay='';
-  days.innerHTML=daysConfig.map((x,i)=>`<div class="chip ${i===0?'active':''}" data-day="${x.day_name}">${x.day_name}</div>`).join('');
-  const first=daysConfig[0];
-  if(first) selectedDay=first.day_name;
-  document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{
-    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
-    el.classList.add('active');
-    selectedDay=el.dataset.day;
-    loadSlots();
-  });
-  await loadSlots();
-}
-
-async function loadSlots(){
-  selectedSlot='';
-  if(!selectedDay){slots.innerHTML='';return;}
-  const s=await j(`/api/slots?branch_id=${branch.value}&day_name=${encodeURIComponent(selectedDay)}`);
-  slots.innerHTML=(s.slots||[]).map(x=>`<div class="slot ${x.available?'':'na'}" data-time="${x.time}"><span>⏱</span><span>متاح من توقيت ${x.time}</span></div>`).join('');
-  document.querySelectorAll('.slot:not(.na)').forEach(el=>el.onclick=()=>{
-    document.querySelectorAll('.slot').forEach(a=>a.classList.remove('sel'));
-    el.classList.add('sel');
-    selectedSlot=el.dataset.time;
-  });
-}
-
+let captchaToken='',selectedSlot='',selectedDay='',daysConfig=[],step=1;
+const setStep=()=>{['p1','p2','p3'].forEach((x,i)=>document.getElementById(x).classList.toggle('active',i+1===step));['s1','s2','s3'].forEach((x,i)=>document.getElementById(x).classList.toggle('active',i+1===step));}
+function nextStep(n){if(n===2&&(!transfer.value||!phone.value)){msg.style.color='#b00020';msg.textContent='يرجى تعبئة رقم الحوالة والهاتف';return;}if(n===3&&!selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';return;}step=n;setStep();}
+async function j(url, options){const r=await fetch(url, options);return await r.json();}
+async function refreshCaptcha(){const cap=await j('/api/captcha');captchaImg.src=cap.image;captchaToken=cap.token;}
+async function init(){const b=await j('/api/branches');branch.innerHTML=b.branches.map(x=>`<option value="${x.id}">${x.name} (${x.code}) - ${x.location}</option>`).join('');const c=await j('/api/companies');company.innerHTML=c.companies.map(x=>`<option value="${x.id}">${x.name}${x.description?` - ${x.description}`:''}</option>`).join('');await refreshCaptcha();await loadDays();}
+async function loadDays(){const d=await j('/api/business-days?branch_id='+branch.value);daysConfig=d.days||[];selectedDay='';days.innerHTML=daysConfig.map((x,i)=>`<div class="chip ${i===0?'active':''}" data-day="${x.day_name}">${x.day_name}</div>`).join('');if(daysConfig[0])selectedDay=daysConfig[0].day_name;document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');selectedDay=el.dataset.day;loadSlots();});await loadSlots();}
+async function loadSlots(){selectedSlot='';if(!selectedDay){slots.innerHTML='';return;}const s=await j(`/api/slots?branch_id=${branch.value}&day_name=${encodeURIComponent(selectedDay)}`);slots.innerHTML=(s.slots||[]).map(x=>`<div class="slot ${x.available?'':'na'}" data-time="${x.time}"><span>⏱</span><span>${x.time}</span></div>`).join('');document.querySelectorAll('.slot:not(.na)').forEach(el=>el.onclick=()=>{document.querySelectorAll('.slot').forEach(a=>a.classList.remove('sel'));el.classList.add('sel');selectedSlot=el.dataset.time;});}
 branch.onchange=loadDays;
-
-async function sendOtp(){
-  const r=await j('/api/send-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:phone.value,transfer_number:transfer.value,captcha_answer:captchaA.value,captcha_token:captchaToken})});
-  msg.style.color=r.ok?'#106a3b':'#b00020';
-  msg.textContent=r.message||r.error||'خطأ غير متوقع';
-  if(!r.ok) await refreshCaptcha();
-}
-
-async function book(){
-  if(!selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';return;}
-  const r=await j('/api/book',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({transfer_number:transfer.value,branch_id:branch.value,company_id:company.value,day_name:selectedDay,slot_time:selectedSlot,phone:phone.value,otp_code:otp.value})});
-  msg.style.color=r.success?'#106a3b':'#b00020';
-  msg.textContent=r.message||r.error||'خطأ غير متوقع';
-  if(r.success) await loadSlots();
-}
-
+async function sendOtp(){const r=await j('/api/send-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:phone.value,transfer_number:transfer.value,captcha_answer:captchaA.value,captcha_token:captchaToken})});msg.style.color=r.ok?'#1b5e20':'#b00020';msg.textContent=r.message||r.error||'خطأ غير متوقع';if(!r.ok)await refreshCaptcha();}
+async function book(){const r=await j('/api/book',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({transfer_number:transfer.value,branch_id:branch.value,company_id:company.value,day_name:selectedDay,slot_time:selectedSlot,phone:phone.value,otp_code:otp.value})});msg.style.color=r.success?'#1b5e20':'#b00020';msg.textContent=r.message||r.error||'خطأ غير متوقع';if(r.success){await loadSlots();step=1;setStep();}}
 init();
 </script>
 </body>
