@@ -1,4 +1,4 @@
-# منصة حجز دور بنك البركة (MVP)
+# booking_sys - منصة حجز دور بنك البركة (MVP)
 
 ## التشغيل
 ```bash
@@ -6,6 +6,7 @@ cp .env.example .env
 npm install
 npm run dev
 ```
+
 ثم افتح:
 - الواجهة العامة: `http://localhost:8090`
 - لوحة التحكم: `http://localhost:8090/admin`
