@@ -75,3 +75,14 @@ CREATE TABLE IF NOT EXISTS otp_security (
   verify_fail_count INT NOT NULL DEFAULT 0,
   locked_until DATETIME NULL
 );
+
+CREATE TABLE IF NOT EXISTS daily_reports (
+  id INT PRIMARY KEY,
+  report_date DATE NOT NULL,
+  branch_id INT NOT NULL,
+  total_booked INT NOT NULL DEFAULT 0,
+  payload_json LONGTEXT NULL,
+  created_at DATETIME NULL,
+  UNIQUE KEY uniq_report_date_branch (report_date, branch_id),
+  INDEX idx_report_date (report_date)
+);

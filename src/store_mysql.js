@@ -15,7 +15,7 @@ const pool = mysql.createPool({
   connectionLimit: 10
 });
 
-const TABLE_KEYS = ['branches', 'remittance_companies', 'business_days', 'appointments', 'dashboard_users', 'otp_codes'];
+const TABLE_KEYS = ['branches', 'remittance_companies', 'business_days', 'appointments', 'dashboard_users', 'otp_codes', 'daily_reports'];
 
 function normalizeDate(v) {
   if (!v) return null;
@@ -32,6 +32,7 @@ async function read() {
   const [users] = await pool.query('SELECT * FROM dashboard_users');
   const [otpCodes] = await pool.query('SELECT * FROM otp_codes');
   const [otpSecurity] = await pool.query('SELECT * FROM otp_security');
+  const [dailyReports] = await pool.query('SELECT * FROM daily_reports');
 
   const data = {
     branches,
@@ -40,7 +41,8 @@ async function read() {
     appointments: appointments.map(r => ({ ...r, created_at: normalizeDate(r.created_at) })),
     dashboard_users: users,
     otp_codes: otpCodes.map(r => ({ ...r, expires_at: normalizeDate(r.expires_at), created_at: normalizeDate(r.created_at) })),
-    otp_security: otpSecurity.map(r => ({ ...r, window_start: normalizeDate(r.window_start), locked_until: normalizeDate(r.locked_until) }))
+    otp_security: otpSecurity.map(r => ({ ...r, window_start: normalizeDate(r.window_start), locked_until: normalizeDate(r.locked_until) })),
+    daily_reports: dailyReports.map(r => ({ ...r, report_date: normalizeDate(r.report_date)?.slice(0,10), created_at: normalizeDate(r.created_at), payload: r.payload_json ? JSON.parse(r.payload_json) : [] }))
   };
 
   data.counters = {};
@@ -70,6 +72,7 @@ async function write(data) {
     await conn.query('DELETE FROM dashboard_users');
     await conn.query('DELETE FROM otp_codes');
     await conn.query('DELETE FROM otp_security');
+    await conn.query('DELETE FROM daily_reports');
     await conn.query('DELETE FROM remittance_companies');
 
     for (const r of data.branches || []) {
@@ -92,6 +95,9 @@ async function write(data) {
     }
     for (const r of data.otp_security || []) {
       await conn.query('INSERT INTO otp_security (phone, send_count, window_start, verify_fail_count, locked_until) VALUES (?,?,?,?,?)', [r.phone, Number(r.send_count || 0), toMysqlDate(r.window_start), Number(r.verify_fail_count || 0), toMysqlDate(r.locked_until)]);
+    }
+    for (const r of data.daily_reports || []) {
+      await conn.query('INSERT INTO daily_reports (id, report_date, branch_id, total_booked, payload_json, created_at) VALUES (?,?,?,?,?,?)', [r.id, r.report_date, Number(r.branch_id), Number(r.total_booked || 0), JSON.stringify(r.payload || []), toMysqlDate(r.created_at)]);
     }
 
     await conn.commit();

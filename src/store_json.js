@@ -10,14 +10,15 @@ function nowISO() {
 
 function defaultData() {
   return {
-    counters: { branches: 1, remittance_companies: 1, business_days: 1, appointments: 1, dashboard_users: 1, otp_codes: 1 },
+    counters: { branches: 1, remittance_companies: 1, business_days: 1, appointments: 1, dashboard_users: 1, otp_codes: 1, daily_reports: 1 },
     branches: [],
     remittance_companies: [],
     business_days: [],
     appointments: [],
     dashboard_users: [],
     otp_codes: [],
-    otp_security: []
+    otp_security: [],
+    daily_reports: []
   };
 }
 

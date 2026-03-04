@@ -28,7 +28,7 @@ async function main() {
     multipleStatements: true
   });
 
-  const tables = ['appointments', 'business_days', 'branches', 'dashboard_users', 'otp_codes', 'otp_security', 'remittance_companies'];
+  const tables = ['appointments', 'business_days', 'branches', 'dashboard_users', 'otp_codes', 'otp_security', 'daily_reports', 'remittance_companies'];
   for (const t of tables) await conn.execute(`DELETE FROM ${t}`);
 
   for (const r of raw.branches || []) {
@@ -57,6 +57,10 @@ async function main() {
 
   for (const r of raw.otp_security || []) {
     await conn.execute('INSERT INTO otp_security (phone, send_count, window_start, verify_fail_count, locked_until) VALUES (?,?,?,?,?)', [r.phone, Number(r.send_count || 0), toMySqlDate(r.window_start), Number(r.verify_fail_count || 0), toMySqlDate(r.locked_until)]);
+  }
+
+  for (const r of raw.daily_reports || []) {
+    await conn.execute('INSERT INTO daily_reports (id, report_date, branch_id, total_booked, payload_json, created_at) VALUES (?,?,?,?,?,?)', [r.id, r.report_date || null, Number(r.branch_id || 0), Number(r.total_booked || 0), JSON.stringify(r.payload || []), toMySqlDate(r.created_at)]);
   }
 
   await conn.end();
