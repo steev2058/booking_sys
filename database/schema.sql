@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS appointments (
 CREATE TABLE IF NOT EXISTS dashboard_users (
   id INT PRIMARY KEY,
   username VARCHAR(80) NOT NULL UNIQUE,
+  employee_no VARCHAR(20) NULL UNIQUE,
+  full_name VARCHAR(160) NULL,
   password_hash VARCHAR(255) NOT NULL,
   role VARCHAR(40) NOT NULL,
   branch_id INT NULL,

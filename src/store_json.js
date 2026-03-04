@@ -76,6 +76,8 @@ function seedIfNeeded() {
     d.dashboard_users.push({
       id: nextId(d, 'dashboard_users'),
       username: 'admin',
+      employee_no: '50000',
+      full_name: 'System Admin',
       password_hash: bcrypt.hashSync('admin1234', 10),
       role: 'admin',
       branch_id: null,
@@ -85,8 +87,10 @@ function seedIfNeeded() {
     d.dashboard_users.push({
       id: nextId(d, 'dashboard_users'),
       username: 'dam_emp',
+      employee_no: '50001',
+      full_name: 'Damascus Employee',
       password_hash: bcrypt.hashSync('branch1234', 10),
-      role: 'branch_employee',
+      role: 'employee',
       branch_id: dam ? dam.id : null,
       active: 1
     });

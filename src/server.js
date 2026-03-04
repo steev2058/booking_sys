@@ -18,6 +18,11 @@ const OTP_WINDOW_MINUTES = Number(process.env.OTP_WINDOW_MINUTES || 10);
 const OTP_MAX_PER_WINDOW = Number(process.env.OTP_MAX_PER_WINDOW || 5);
 const OTP_MAX_VERIFY_ATTEMPTS = Number(process.env.OTP_MAX_VERIFY_ATTEMPTS || 5);
 const OTP_LOCK_MINUTES = Number(process.env.OTP_LOCK_MINUTES || 30);
+const EMPLOYEE_PREFIX = process.env.EMPLOYEE_PREFIX || '50';
+
+const ROLE_ADMIN_LIKE = ['admin', 'manager'];
+const ROLE_VIEW_APPOINTMENTS = ['admin', 'manager', 'employee', 'branch_employee'];
+const ROLE_DAY_MANAGE = ['admin', 'manager', 'branch_employee'];
 
 app.use(cors());
 app.use(express.json());
@@ -132,6 +137,28 @@ function verifyCaptcha(answer, token) {
 
 function isValidPhone(phone) {
   return /^\d{10}$/.test(String(phone || '').trim());
+}
+
+function normalizeRole(role) {
+  const r = String(role || '').toLowerCase();
+  if (r === 'employe') return 'employee';
+  return r;
+}
+
+function randomPassword(len = 10) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$';
+  let out = '';
+  for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
+}
+
+function generateEmployeeNo(data) {
+  const list = (data.dashboard_users || [])
+    .map(u => String(u.employee_no || ''))
+    .filter(v => v.startsWith(EMPLOYEE_PREFIX) && /^\d+$/.test(v))
+    .map(v => Number(v));
+  const max = list.length ? Math.max(...list) : Number(`${EMPLOYEE_PREFIX}000`);
+  return String(max + 1);
 }
 
 function getSec(data, phone) {
@@ -410,21 +437,23 @@ app.post('/api/book', async (req, res) => {
 });
 
 app.post('/api/admin/login', async (req, res) => {
-  const { username, password } = req.body || {};
+  const { username, employee_no, password } = req.body || {};
+  const loginId = String(employee_no || username || '').trim();
   const data = await read();
-  const user = data.dashboard_users.find(u => u.username === username && Number(u.active) === 1);
+  const user = data.dashboard_users.find(u => (u.username === loginId || String(u.employee_no || '') === loginId) && Number(u.active) === 1);
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   if (!bcrypt.compareSync(password || '', user.password_hash)) return res.status(401).json({ error: 'Invalid credentials' });
-  const token = jwt.sign({ id: user.id, username: user.username, role: user.role, branch_id: user.branch_id || null }, JWT_SECRET, { expiresIn: '12h' });
-  res.json({ token, role: user.role, branch_id: user.branch_id || null });
+  const role = normalizeRole(user.role);
+  const token = jwt.sign({ id: user.id, username: user.username, employee_no: user.employee_no || null, role, branch_id: user.branch_id || null }, JWT_SECRET, { expiresIn: '12h' });
+  res.json({ token, role, branch_id: user.branch_id || null, employee_no: user.employee_no || null, username: user.username });
 });
 
-app.get('/api/admin/appointments', auth(['admin', 'branch_employee']), async (req, res) => {
+app.get('/api/admin/appointments', auth(ROLE_VIEW_APPOINTMENTS), async (req, res) => {
   const { branch_id, day_name } = req.query;
   const data = await read();
   let rows = data.appointments;
 
-  if (req.user.role === 'branch_employee') rows = rows.filter(a => Number(a.branch_id) === Number(req.user.branch_id));
+  if (req.user.role === 'branch_employee' || req.user.role === 'employee') rows = rows.filter(a => Number(a.branch_id) === Number(req.user.branch_id));
   else if (branch_id) rows = rows.filter(a => Number(a.branch_id) === Number(branch_id));
   if (day_name) rows = rows.filter(a => a.day_name === String(day_name));
 
@@ -437,7 +466,7 @@ app.get('/api/admin/appointments', auth(['admin', 'branch_employee']), async (re
   res.json({ appointments: out });
 });
 
-app.delete('/api/admin/appointments/:id', auth(['admin']), async (req, res) => {
+app.delete('/api/admin/appointments/:id', auth(ROLE_ADMIN_LIKE), async (req, res) => {
   const data = await read();
   const row = data.appointments.find(a => Number(a.id) === Number(req.params.id));
   if (row) row.status = 'cancelled';
@@ -445,12 +474,12 @@ app.delete('/api/admin/appointments/:id', auth(['admin']), async (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/admin/branches', auth(['admin']), async (_req, res) => {
+app.get('/api/admin/branches', auth(ROLE_ADMIN_LIKE), async (_req, res) => {
   const data = await read();
   res.json({ branches: [...data.branches].sort((a, b) => Number(b.id) - Number(a.id)) });
 });
 
-app.post('/api/admin/branches', auth(['admin']), async (req, res) => {
+app.post('/api/admin/branches', auth(ROLE_ADMIN_LIKE), async (req, res) => {
   const { code, name, location } = req.body || {};
   if (!code || !name || !location) return res.status(400).json({ error: 'Missing fields' });
   const data = await read();
@@ -459,7 +488,7 @@ app.post('/api/admin/branches', auth(['admin']), async (req, res) => {
   res.json({ ok: true });
 });
 
-app.put('/api/admin/branches/:id', auth(['admin']), async (req, res) => {
+app.put('/api/admin/branches/:id', auth(ROLE_ADMIN_LIKE), async (req, res) => {
   const data = await read();
   const row = data.branches.find(b => Number(b.id) === Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Not found' });
@@ -469,19 +498,19 @@ app.put('/api/admin/branches/:id', auth(['admin']), async (req, res) => {
   res.json({ ok: true });
 });
 
-app.delete('/api/admin/branches/:id', auth(['admin']), async (req, res) => {
+app.delete('/api/admin/branches/:id', auth(ROLE_ADMIN_LIKE), async (req, res) => {
   const data = await read();
   data.branches = data.branches.filter(b => Number(b.id) !== Number(req.params.id));
   await write(data);
   res.json({ ok: true });
 });
 
-app.get('/api/admin/companies', auth(['admin']), async (_req, res) => {
+app.get('/api/admin/companies', auth(ROLE_ADMIN_LIKE), async (_req, res) => {
   const data = await read();
   res.json({ companies: [...data.remittance_companies].sort((a, b) => Number(b.id) - Number(a.id)) });
 });
 
-app.post('/api/admin/companies', auth(['admin']), async (req, res) => {
+app.post('/api/admin/companies', auth(ROLE_ADMIN_LIKE), async (req, res) => {
   const { name, description } = req.body || {};
   if (!name) return res.status(400).json({ error: 'name required' });
   const data = await read();
@@ -490,7 +519,7 @@ app.post('/api/admin/companies', auth(['admin']), async (req, res) => {
   res.json({ ok: true });
 });
 
-app.put('/api/admin/companies/:id', auth(['admin']), async (req, res) => {
+app.put('/api/admin/companies/:id', auth(ROLE_ADMIN_LIKE), async (req, res) => {
   const data = await read();
   const row = data.remittance_companies.find(c => Number(c.id) === Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Not found' });
@@ -500,14 +529,14 @@ app.put('/api/admin/companies/:id', auth(['admin']), async (req, res) => {
   res.json({ ok: true });
 });
 
-app.delete('/api/admin/companies/:id', auth(['admin']), async (req, res) => {
+app.delete('/api/admin/companies/:id', auth(ROLE_ADMIN_LIKE), async (req, res) => {
   const data = await read();
   data.remittance_companies = data.remittance_companies.filter(c => Number(c.id) !== Number(req.params.id));
   await write(data);
   res.json({ ok: true });
 });
 
-app.get('/api/admin/business-days', auth(['admin', 'branch_employee']), async (req, res) => {
+app.get('/api/admin/business-days', auth(ROLE_DAY_MANAGE), async (req, res) => {
   const data = await read();
   let rows = data.business_days;
   if (req.user.role === 'branch_employee') rows = rows.filter(d => Number(d.branch_id) === Number(req.user.branch_id));
@@ -515,7 +544,7 @@ app.get('/api/admin/business-days', auth(['admin', 'branch_employee']), async (r
   res.json({ business_days: rows.sort((a, b) => Number(b.id) - Number(a.id)) });
 });
 
-app.post('/api/admin/business-days', auth(['admin', 'branch_employee']), async (req, res) => {
+app.post('/api/admin/business-days', auth(ROLE_DAY_MANAGE), async (req, res) => {
   const data = await read();
   let { branch_id, day_name, start_time, end_time, interval_minutes, active } = req.body || {};
   if (req.user.role === 'branch_employee') branch_id = req.user.branch_id;
@@ -532,7 +561,7 @@ app.post('/api/admin/business-days', auth(['admin', 'branch_employee']), async (
   res.json({ ok: true });
 });
 
-app.put('/api/admin/business-days/:id', auth(['admin', 'branch_employee']), async (req, res) => {
+app.put('/api/admin/business-days/:id', auth(ROLE_DAY_MANAGE), async (req, res) => {
   const data = await read();
   const row = data.business_days.find(d => Number(d.id) === Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Not found' });
@@ -549,12 +578,89 @@ app.put('/api/admin/business-days/:id', auth(['admin', 'branch_employee']), asyn
   res.json({ ok: true });
 });
 
-app.delete('/api/admin/business-days/:id', auth(['admin', 'branch_employee']), async (req, res) => {
+app.delete('/api/admin/business-days/:id', auth(ROLE_DAY_MANAGE), async (req, res) => {
   const data = await read();
   const row = data.business_days.find(d => Number(d.id) === Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Not found' });
   if (req.user.role === 'branch_employee' && Number(row.branch_id) !== Number(req.user.branch_id)) return res.status(403).json({ error: 'Forbidden for other branch' });
   data.business_days = data.business_days.filter(d => Number(d.id) !== Number(req.params.id));
+  await write(data);
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/users', auth(['admin']), async (_req, res) => {
+  const data = await read();
+  const users = (data.dashboard_users || []).map(u => ({
+    id: u.id,
+    username: u.username,
+    employee_no: u.employee_no || '',
+    full_name: u.full_name || '',
+    role: normalizeRole(u.role),
+    branch_id: u.branch_id || null,
+    active: Number(u.active || 0)
+  })).sort((a, b) => Number(b.id) - Number(a.id));
+  res.json({ users });
+});
+
+app.post('/api/admin/users', auth(['admin']), async (req, res) => {
+  const data = await read();
+  const { username, full_name, role, branch_id, active } = req.body || {};
+  const cleanUsername = String(username || '').trim();
+  const cleanName = String(full_name || '').trim();
+  const cleanRole = normalizeRole(role);
+  if (!cleanUsername || !cleanName) return res.status(400).json({ error: 'username/full_name required' });
+  if (!['manager', 'employee'].includes(cleanRole)) return res.status(400).json({ error: 'role must be manager or employee' });
+  if (data.dashboard_users.some(u => u.username === cleanUsername)) return res.status(409).json({ error: 'username already exists' });
+
+  const employeeNo = generateEmployeeNo(data);
+  const passwordPlain = randomPassword(10);
+
+  data.dashboard_users.push({
+    id: nextId(data, 'dashboard_users'),
+    username: cleanUsername,
+    employee_no: employeeNo,
+    full_name: cleanName,
+    password_hash: bcrypt.hashSync(passwordPlain, 10),
+    role: cleanRole,
+    branch_id: cleanRole === 'employee' ? Number(branch_id || 0) || null : null,
+    active: Number(active ?? 1)
+  });
+
+  await write(data);
+  return res.json({ ok: true, credentials: { username: cleanUsername, employee_no: employeeNo, password: passwordPlain } });
+});
+
+app.put('/api/admin/users/:id', auth(['admin']), async (req, res) => {
+  const data = await read();
+  const row = data.dashboard_users.find(u => Number(u.id) === Number(req.params.id));
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  const { full_name, role, branch_id, active, reset_password } = req.body || {};
+
+  if (full_name !== undefined) row.full_name = String(full_name || '').trim();
+  if (role !== undefined) {
+    const cleanRole = normalizeRole(role);
+    if (!['admin', 'manager', 'employee', 'branch_employee'].includes(cleanRole)) return res.status(400).json({ error: 'invalid role' });
+    row.role = cleanRole;
+  }
+  if (branch_id !== undefined) row.branch_id = Number(branch_id || 0) || null;
+  if (active !== undefined) row.active = Number(active ? 1 : 0);
+
+  let newPassword = null;
+  if (reset_password) {
+    newPassword = randomPassword(10);
+    row.password_hash = bcrypt.hashSync(newPassword, 10);
+  }
+
+  await write(data);
+  res.json({ ok: true, new_password: newPassword });
+});
+
+app.delete('/api/admin/users/:id', auth(['admin']), async (req, res) => {
+  const data = await read();
+  const target = data.dashboard_users.find(u => Number(u.id) === Number(req.params.id));
+  if (!target) return res.status(404).json({ error: 'Not found' });
+  if (normalizeRole(target.role) === 'admin') return res.status(400).json({ error: 'cannot delete admin user' });
+  data.dashboard_users = data.dashboard_users.filter(u => Number(u.id) !== Number(req.params.id));
   await write(data);
   res.json({ ok: true });
 });

@@ -85,7 +85,7 @@ async function write(data) {
       await conn.query('INSERT INTO appointments (id, transfer_number, branch_id, company_id, day_name, booking_date, slot_time, slot_to, phone, full_name, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [r.id, r.transfer_number, r.branch_id, r.company_id, r.day_name, r.booking_date || null, r.slot_time, r.slot_to || null, r.phone, r.full_name || null, r.status || 'booked', toMysqlDate(r.created_at)]);
     }
     for (const r of data.dashboard_users || []) {
-      await conn.query('INSERT INTO dashboard_users (id, username, password_hash, role, branch_id, active) VALUES (?,?,?,?,?,?)', [r.id, r.username, r.password_hash, r.role, r.branch_id || null, Number(r.active || 0)]);
+      await conn.query('INSERT INTO dashboard_users (id, username, employee_no, full_name, password_hash, role, branch_id, active) VALUES (?,?,?,?,?,?,?,?)', [r.id, r.username, r.employee_no || null, r.full_name || null, r.password_hash, r.role, r.branch_id || null, Number(r.active || 0)]);
     }
     for (const r of data.otp_codes || []) {
       await conn.query('INSERT INTO otp_codes (id, phone, full_name, code, transfer_number, expires_at, used, created_at) VALUES (?,?,?,?,?,?,?,?)', [r.id, r.phone, r.full_name || null, r.code, r.transfer_number, toMysqlDate(r.expires_at), Number(r.used || 0), toMysqlDate(r.created_at)]);
@@ -145,6 +145,8 @@ async function seedIfNeeded() {
     d.dashboard_users.push({
       id: nextId(d, 'dashboard_users'),
       username: 'admin',
+      employee_no: '50000',
+      full_name: 'System Admin',
       password_hash: bcrypt.hashSync('admin1234', 10),
       role: 'admin',
       branch_id: null,
@@ -154,8 +156,10 @@ async function seedIfNeeded() {
     d.dashboard_users.push({
       id: nextId(d, 'dashboard_users'),
       username: 'dam_emp',
+      employee_no: '50001',
+      full_name: 'Damascus Employee',
       password_hash: bcrypt.hashSync('branch1234', 10),
-      role: 'branch_employee',
+      role: 'employee',
       branch_id: dam ? dam.id : null,
       active: 1
     });

@@ -48,7 +48,7 @@ async function main() {
   }
 
   for (const r of raw.dashboard_users || []) {
-    await conn.execute('INSERT INTO dashboard_users (id, username, password_hash, role, branch_id, active) VALUES (?,?,?,?,?,?)', [r.id, r.username, r.password_hash, r.role, r.branch_id || null, Number(r.active || 0)]);
+    await conn.execute('INSERT INTO dashboard_users (id, username, employee_no, full_name, password_hash, role, branch_id, active) VALUES (?,?,?,?,?,?,?,?)', [r.id, r.username, r.employee_no || null, r.full_name || null, r.password_hash, r.role, r.branch_id || null, Number(r.active || 0)]);
   }
 
   for (const r of raw.otp_codes || []) {
