@@ -610,16 +610,20 @@ app.get('/api/admin/users', auth(['admin']), async (_req, res) => {
 
 app.post('/api/admin/users', auth(['admin']), async (req, res) => {
   const data = await read();
-  const { username, full_name, role, branch_id, active } = req.body || {};
+  const { username, full_name, employee_no, role, branch_id, active } = req.body || {};
   const cleanUsername = String(username || '').trim();
   const cleanName = String(full_name || '').trim();
+  const cleanEmpNo = String(employee_no || '').trim();
   const cleanRole = normalizeRole(role);
   if (!cleanUsername || !cleanName) return res.status(400).json({ error: 'username/full_name required' });
   if (!['manager', 'employee'].includes(cleanRole)) return res.status(400).json({ error: 'role must be manager or employee' });
   if ((cleanRole === 'employee' || (cleanRole === 'manager' && MANAGER_SCOPED_TO_BRANCH)) && !Number(branch_id)) return res.status(400).json({ error: 'branch_id required for this role' });
   if (data.dashboard_users.some(u => u.username === cleanUsername)) return res.status(409).json({ error: 'username already exists' });
+  if (cleanEmpNo && !/^50\d+$/.test(cleanEmpNo)) return res.status(400).json({ error: 'employee_no must start with 50 and contain digits only' });
 
-  const employeeNo = generateEmployeeNo(data);
+  const employeeNo = cleanEmpNo || generateEmployeeNo(data);
+  if (data.dashboard_users.some(u => String(u.employee_no || '') === employeeNo)) return res.status(409).json({ error: 'employee_no already exists' });
+
   const passwordPlain = randomPassword(10);
 
   data.dashboard_users.push({
