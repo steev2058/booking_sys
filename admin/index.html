@@ -72,10 +72,11 @@
     <h3 style="margin-bottom:6px">تسجيل دخول لوحة التحكم</h3>
     <div class="muted" style="margin-bottom:14px">الدخول يتم عبر الرقم الوظيفي وكلمة المرور.</div>
     <div class="row">
-      <div class="field"><label>الرقم الوظيفي</label><input id="u" placeholder="مثال: 50021" inputmode="numeric"></div>
+      <div class="field"><label>الرقم الوظيفي</label><input id="u" placeholder="مثال: 50xxx" inputmode="numeric"></div>
       <div class="field"><label>كلمة المرور</label><div style="display:flex;gap:6px"><input id="p" type="password" placeholder="********"><button type="button" class="ghost" onclick="togglePass(this)" style="min-width:88px">إظهار</button></div></div>
-      <button onclick="login()" style="min-width:120px">دخول</button>
     </div>
+    <button onclick="login()" style="min-width:120px;margin-top: 5%;">دخول</button>
+
   </div>
 
   <div id="panel" class="hide">
@@ -116,26 +117,26 @@
 
     <div id="sec-branches" class="section card">
       <h3>إدارة الفروع</h3>
-      <div class="row"><div class="col"><input id="b_code" placeholder="رمز الفرع"></div><div class="col"><input id="b_name" placeholder="اسم الفرع"></div><div class="col"><input id="b_loc" placeholder="الموقع"></div><button onclick="addBranch()">إضافة</button></div>
+      <div class="row" style="margin-bottom: 3%;"><div class="col"><input id="b_code" placeholder="رمز الفرع"></div><div class="col"><input id="b_name" placeholder="اسم الفرع"></div><div class="col"><input id="b_loc" placeholder="الموقع"></div><button onclick="addBranch()">إضافة</button></div>
       <div class="table-wrap"><table><thead><tr><th>ID</th><th>Code</th><th>Name</th><th>Location</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="branchesTb"></tbody></table></div>
     </div>
 
     <div id="sec-companies" class="section card">
       <h3>إدارة شركات الحوالات</h3>
-      <div class="row"><div class="col"><input id="c_name" placeholder="اسم الشركة"></div><div class="col"><input id="c_desc" placeholder="الوصف"></div><button onclick="addCompany()">إضافة</button></div>
+      <div class="row" style="margin-bottom: 3%;"><div class="col"><input id="c_name" placeholder="اسم الشركة"></div><div class="col"><input id="c_desc" placeholder="الوصف"></div><button onclick="addCompany()">إضافة</button></div>
       <div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="companiesTb"></tbody></table></div>
     </div>
 
     <div id="sec-days" class="section card">
       <h3>إدارة أيام الدوام</h3>
-      <div class="row"><div class="col"><input id="d_branch" placeholder="branch_id"></div><div class="col"><input id="d_name" placeholder="day_name"></div><div class="col"><input id="d_start" placeholder="09:00"></div><div class="col"><input id="d_end" placeholder="15:00"></div><div class="col"><input id="d_int" placeholder="60"></div><button onclick="addBusinessDay()">إضافة</button></div>
+      <div class="row" style="margin-bottom: 3%;"><div class="col"><input id="d_branch" placeholder="branch_id"></div><div class="col"><input id="d_name" placeholder="day_name"></div><div class="col"><input id="d_start" placeholder="09:00"></div><div class="col"><input id="d_end" placeholder="15:00"></div><div class="col"><input id="d_int" placeholder="60"></div><button onclick="addBusinessDay()">إضافة</button></div>
       <div class="table-wrap"><table><thead><tr><th>ID</th><th>Branch</th><th>Day</th><th>Start</th><th>End</th><th>Interval</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="daysTb"></tbody></table></div>
     </div>
 
     <div id="sec-users" class="section card">
       <h3>إدارة مستخدمي لوحة التحكم</h3>
       <div class="muted">الإدارة فقط تستطيع إضافة المستخدمين وتحديد الصلاحيات.</div>
-      <div class="row">
+      <div class="row" style="margin-bottom: 3%;">
         <div class="field"><label>اسم المستخدم</label><input id="new_username" placeholder="username"></div>
         <div class="field"><label>الاسم الكامل</label><input id="new_full_name" placeholder="الاسم الكامل"></div>
         <div class="field"><label>الرقم الوظيفي</label><input id="new_employee_no" placeholder="مثال 50023"></div>
@@ -146,7 +147,7 @@
           </select>
         </div>
         <div class="field"><label>الفرع</label><select id="new_branch_id"><option value="">اختر الفرع</option></select></div>
-        <button onclick="addUser()">إضافة مستخدم</button>
+        <button onclick="addUser()" style="width: 10%;margin-top: 2%;">إضافة مستخدم</button>
       </div>
       <div class="searchbar"><input id="usersSearch" placeholder="بحث بالمستخدمين (اسم/رقم وظيفي/دور)"></div>
       <div class="table-wrap"><table><thead><tr><th>ID</th><th>اسم المستخدم</th><th>الرقم الوظيفي</th><th>الاسم الكامل</th><th>الدور</th><th>الفرع</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="usersTb"></tbody></table></div>
@@ -156,7 +157,7 @@
       <h3>التقارير اليومية التلقائية</h3>
       <div class="muted">يتم توليد تقرير بداية يوم العمل لكل فرع، ويمكن توليده يدويًا عند الحاجة.</div>
       <div class="row">
-        <div class="field"><label>تاريخ التقرير</label><input id="r_date" type="date"></div>
+        <div class="field" style="max-width: 19%;margin-bottom: 2%;"><label>تاريخ التقرير</label><input id="r_date" type="date"></div>
         <button onclick="loadReports()">عرض التقارير</button>
         <button id="btnGenerateReports" onclick="generateReports()">توليد الآن</button>
       </div>
