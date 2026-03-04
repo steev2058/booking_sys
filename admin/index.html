@@ -30,6 +30,15 @@
     .toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
     .chip-info{background:#eceff1;border:1px solid #cfd8dc;border-radius:999px;padding:6px 10px;font-weight:800;color:#455a64}
     .muted{color:#607d8b;font-size:13px;margin-top:-4px;margin-bottom:10px}
+    .kpis{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+    .kpi{background:#fff;border:1px solid #dce3ea;border-radius:12px;padding:10px 12px}
+    .kpi .t{font-size:12px;color:#607d8b;font-weight:800}
+    .kpi .v{font-size:24px;font-weight:900;color:#263238}
+    .searchbar{margin:8px 0}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800}
+    .role-admin{background:#fdecea;color:#b71c1c}
+    .role-manager{background:#e8f5e9;color:#1b5e20}
+    .role-employee{background:#e3f2fd;color:#0d47a1}
     button.ghost{background:#eceff1;color:#455a64}
     button.danger{background:#b71c1c}
     .table-wrap{overflow:auto;-webkit-overflow-scrolling:touch}
@@ -72,6 +81,13 @@
       </div>
       <button class="ghost" onclick="logout()">تسجيل خروج</button>
     </div>
+    <div class="kpis" id="kpis">
+      <div class="kpi"><div class="t">إجمالي المواعيد</div><div class="v" id="kpiTotal">0</div></div>
+      <div class="kpi"><div class="t">المواعيد المحجوزة</div><div class="v" id="kpiBooked">0</div></div>
+      <div class="kpi"><div class="t">اليوم المختار</div><div class="v" id="kpiDay">-</div></div>
+      <div class="kpi"><div class="t">الفرع المختار</div><div class="v" id="kpiBranch">-</div></div>
+    </div>
+
     <div class="tabs">
       <div id="tab-appts" class="tab active" onclick="showSection('appts')">المواعيد</div>
       <div id="tab-branches" class="tab" onclick="showSection('branches')">الفروع</div>
@@ -88,6 +104,7 @@
         <div class="field"><label>اسم اليوم</label><input id="d" placeholder="Sunday"></div>
         <button onclick="loadAppointments()">تحديث</button>
       </div>
+      <div class="searchbar"><input id="apptsSearch" placeholder="بحث سريع (اسم/هاتف/فرع/شركة)"></div>
       <div class="table-wrap"><table><thead><tr><th>ID</th><th>الفرع</th><th>الشركة</th><th>التاريخ</th><th>اليوم</th><th>من</th><th>إلى</th><th>الاسم</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="tb"></tbody></table></div>
     </div>
 
@@ -125,6 +142,7 @@
         <div class="field"><label>الفرع</label><select id="new_branch_id"><option value="">اختر الفرع</option></select></div>
         <button onclick="addUser()">إضافة مستخدم</button>
       </div>
+      <div class="searchbar"><input id="usersSearch" placeholder="بحث بالمستخدمين (اسم/رقم وظيفي/دور)"></div>
       <div class="table-wrap"><table><thead><tr><th>ID</th><th>اسم المستخدم</th><th>الرقم الوظيفي</th><th>الاسم الكامل</th><th>الدور</th><th>الفرع</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="usersTb"></tbody></table></div>
     </div>
   </div>
@@ -142,7 +160,7 @@
 </div>
 
 <script>
-let token=''; let role=''; let myBranchId=null; let branchesCache=[];
+let token=''; let role=''; let myBranchId=null; let branchesCache=[]; let apptsCache=[]; let usersCache=[];
 async function j(u,o={}){const r=await fetch(u,o);return await r.json()}
 function esc(v){return String(v??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function branchSelectHtml(id,val){const opts=['<option value="">--</option>',...branchesCache.map(b=>`<option value="${b.id}" ${Number(val)===Number(b.id)?'selected':''}>${esc(b.name)} (${esc(b.code)})</option>`)].join('');return `<select id='${id}'>${opts}</select>`}
@@ -153,7 +171,8 @@ function confirmAction(text){return new Promise((resolve)=>{const m=document.get
 function showSection(name){['appts','branches','companies','days','users'].forEach(k=>{document.getElementById('sec-'+k).classList.toggle('active',k===name);document.getElementById('tab-'+k).classList.toggle('active',k===name)});if(role==='employee'&&name!=='appts')showSection('appts');if(role==='manager'&&name==='users')showSection('appts');}
 function logout(){token='';role='';myBranchId=null;panel.classList.add('hide');loginCard.classList.remove('hide');u.value='';p.value='';document.getElementById('whoami').textContent='-';document.getElementById('branchScope').textContent='-';document.getElementById('tab-branches').style.display='';document.getElementById('tab-companies').style.display='';document.getElementById('tab-days').style.display='';document.getElementById('tab-users').style.display='';showToast('تم تسجيل الخروج بنجاح');}
 async function login(){const r=await j('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({employee_no:u.value,username:u.value,password:p.value})});if(!r.token){showToast(r.error||'فشل تسجيل الدخول',false);return;}token=r.token;role=r.role;myBranchId=r.branch_id;loginCard.classList.add('hide');panel.classList.remove('hide');document.getElementById('whoami').textContent=`المستخدم: ${r.username||u.value} | الدور: ${roleLabel(role)}`;document.getElementById('branchScope').textContent=`نطاق الفرع: ${myBranchId||'جميع الفروع'}`;if(role==='employee'){document.getElementById('tab-branches').style.display='none';document.getElementById('tab-companies').style.display='none';document.getElementById('tab-days').style.display='none';document.getElementById('tab-users').style.display='none';d_branch.value=myBranchId||'';}else if(role==='manager'){document.getElementById('tab-branches').style.display='none';document.getElementById('tab-companies').style.display='none';document.getElementById('tab-users').style.display='none';d_branch.value=myBranchId||'';}await loadAppointments();if(role==='admin'){await loadBranches();await loadCompanies();await loadDays();await loadUsers();}else if(role==='manager'){await loadDays();}showToast('تم تسجيل الدخول بنجاح');}
-async function loadAppointments(){const q=[];if(f.value)q.push('branch_id='+encodeURIComponent(f.value));if(d.value)q.push('day_name='+encodeURIComponent(d.value));const r=await j('/api/admin/appointments'+(q.length?'?'+q.join('&'):''),{headers:{Authorization:'Bearer '+token}});tb.innerHTML=(r.appointments||[]).map(x=>`<tr><td>${x.id}</td><td>${x.branch_name}</td><td>${x.company_name}</td><td>${x.booking_date||''}</td><td>${x.day_name}</td><td>${x.slot_time||''}</td><td>${x.slot_to||''}</td><td>${x.full_name||''}</td><td>${x.phone}</td><td>${x.status}</td><td>${role==='admin'?`<button class="danger" onclick="delAppt(${x.id})">حذف</button>`:''}</td></tr>`).join('');}
+function renderAppointments(){const q=String(apptsSearch.value||'').trim().toLowerCase();const rows=(apptsCache||[]).filter(x=>!q||`${x.branch_name} ${x.company_name} ${x.full_name||''} ${x.phone||''}`.toLowerCase().includes(q));tb.innerHTML=rows.map(x=>`<tr><td>${x.id}</td><td>${x.branch_name}</td><td>${x.company_name}</td><td>${x.booking_date||''}</td><td>${x.day_name}</td><td>${x.slot_time||''}</td><td>${x.slot_to||''}</td><td>${x.full_name||''}</td><td>${x.phone}</td><td>${x.status}</td><td>${role==='admin'?`<button class="danger" onclick="delAppt(${x.id})">حذف</button>`:''}</td></tr>`).join('');kpiTotal.textContent=rows.length;kpiBooked.textContent=rows.filter(x=>x.status==='booked').length;kpiDay.textContent=d.value||'الكل';kpiBranch.textContent=f.value||String(myBranchId||'الكل');}
+async function loadAppointments(){const q=[];if(f.value)q.push('branch_id='+encodeURIComponent(f.value));if(d.value)q.push('day_name='+encodeURIComponent(d.value));const r=await j('/api/admin/appointments'+(q.length?'?'+q.join('&'):''),{headers:{Authorization:'Bearer '+token}});apptsCache=r.appointments||[];renderAppointments();}
 async function delAppt(id){if(!await confirmAction('تأكيد حذف هذا الموعد؟'))return;await fetch('/api/admin/appointments/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});await loadAppointments();showToast('تم حذف الموعد');}
 async function loadBranches(){const r=await j('/api/admin/branches',{headers:{Authorization:'Bearer '+token}});branchesCache=(r.branches||[]);branchesTb.innerHTML=branchesCache.map(x=>`<tr><td>${x.id}</td><td><input id='bc_${x.id}' value='${x.code}'></td><td><input id='bn_${x.id}' value='${x.name}'></td><td><input id='bl_${x.id}' value='${x.location}'></td><td><select id='ba_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td><td><button class='ghost' onclick='updBranch(${x.id})'>تعديل</button> <button class='danger' onclick='delBranch(${x.id})'>حذف</button></td></tr>`).join('');new_branch_id.innerHTML=['<option value="">اختر الفرع لمستخدم employee</option>',...branchesCache.filter(b=>Number(b.active)===1).map(b=>`<option value="${b.id}">${esc(b.name)} (${esc(b.code)})</option>`)].join('');}
 async function addBranch(){await fetch('/api/admin/branches',{method:'POST',headers:h(),body:JSON.stringify({code:b_code.value,name:b_name.value,location:b_loc.value})});await loadBranches();showToast('تمت إضافة الفرع');}
@@ -168,7 +187,9 @@ async function addBusinessDay(){await fetch('/api/admin/business-days',{method:'
 async function updDay(id){if(!await confirmAction('تأكيد تعديل يوم الدوام؟'))return;await fetch('/api/admin/business-days/'+id,{method:'PUT',headers:h(),body:JSON.stringify({branch_id:Number(role==='branch_employee'?myBranchId:document.getElementById('db_'+id).value),day_name:document.getElementById('dd_'+id).value,start_time:document.getElementById('ds_'+id).value,end_time:document.getElementById('de_'+id).value,interval_minutes:Number(document.getElementById('di_'+id).value||60),active:Number(document.getElementById('da_'+id).value)})});await loadDays();showToast('تم تعديل يوم الدوام');}
 async function delDay(id){if(!await confirmAction('تأكيد حذف يوم الدوام؟'))return;await fetch('/api/admin/business-days/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});await loadDays();showToast('تم حذف يوم الدوام');}
 
-async function loadUsers(){if(!branchesCache.length) await loadBranches();const r=await j('/api/admin/users',{headers:{Authorization:'Bearer '+token}});usersTb.innerHTML=(r.users||[]).map(x=>`<tr><td>${x.id}</td><td>${x.username}</td><td>${x.employee_no||''}</td><td><input id='uf_${x.id}' value='${x.full_name||''}'></td><td><select id='ur_${x.id}'><option value='manager' ${x.role==='manager'?'selected':''}>manager</option><option value='employee' ${x.role==='employee'||x.role==='branch_employee'?'selected':''}>employee</option><option value='admin' ${x.role==='admin'?'selected':''}>admin</option></select></td><td>${branchSelectHtml(`ub_${x.id}`,x.branch_id)}</td><td><select id='ua_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td><td><button class='ghost' onclick='updUser(${x.id})'>تعديل</button> <button class='ghost' onclick='resetUserPass(${x.id})'>توليد كلمة سر</button> <button class='danger' onclick='delUser(${x.id})'>حذف</button></td></tr>`).join('');}
+function roleBadge(r){const rr=(r==='branch_employee'?'employee':r);const cls=rr==='admin'?'role-admin':(rr==='manager'?'role-manager':'role-employee');return `<span class='badge ${cls}'>${rr}</span>`}
+function renderUsers(){const q=String(usersSearch.value||'').trim().toLowerCase();const rows=(usersCache||[]).filter(x=>!q||`${x.username} ${x.employee_no||''} ${x.full_name||''} ${x.role}`.toLowerCase().includes(q));usersTb.innerHTML=rows.map(x=>`<tr><td>${x.id}</td><td>${x.username}</td><td>${x.employee_no||''}</td><td><input id='uf_${x.id}' value='${x.full_name||''}'></td><td>${roleBadge(x.role)} <select id='ur_${x.id}'><option value='manager' ${x.role==='manager'?'selected':''}>manager</option><option value='employee' ${x.role==='employee'||x.role==='branch_employee'?'selected':''}>employee</option><option value='admin' ${x.role==='admin'?'selected':''}>admin</option></select></td><td>${branchSelectHtml(`ub_${x.id}`,x.branch_id)}</td><td><select id='ua_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td><td><button class='ghost' onclick='updUser(${x.id})'>تعديل</button> <button class='ghost' onclick='resetUserPass(${x.id})'>توليد كلمة سر</button> <button class='danger' onclick='delUser(${x.id})'>حذف</button></td></tr>`).join('');}
+async function loadUsers(){if(!branchesCache.length) await loadBranches();const r=await j('/api/admin/users',{headers:{Authorization:'Bearer '+token}});usersCache=r.users||[];renderUsers();}
 
 async function addUser(){if(new_role.value==='employee'&&!new_branch_id.value){showToast('اختر الفرع لمستخدم employee',false);return;}const payload={username:new_username.value,full_name:new_full_name.value,employee_no:new_employee_no.value,role:new_role.value,branch_id:Number(new_branch_id.value)||null,active:1};const r=await j('/api/admin/users',{method:'POST',headers:h(),body:JSON.stringify(payload)});if(!r.ok){showToast(r.error||'فشل إضافة المستخدم',false);return;}new_employee_no.value='';await loadUsers();showToast(`تمت الإضافة. الرقم الوظيفي: ${r.credentials.employee_no} | كلمة السر: ${r.credentials.password}`);}
 
@@ -177,6 +198,9 @@ async function updUser(id){if(!await confirmAction('تأكيد تعديل بيا
 async function resetUserPass(id){if(!await confirmAction('توليد كلمة سر جديدة لهذا المستخدم؟'))return;const r=await j('/api/admin/users/'+id,{method:'PUT',headers:h(),body:JSON.stringify({reset_password:true})});if(!r.ok){showToast(r.error||'فشل العملية',false);return;}showToast(`كلمة السر الجديدة: ${r.new_password}`);}
 
 async function delUser(id){if(!await confirmAction('تأكيد حذف المستخدم؟'))return;const r=await j('/api/admin/users/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});if(!r.ok){showToast(r.error||'فشل الحذف',false);return;}await loadUsers();showToast('تم حذف المستخدم');}
+
+apptsSearch?.addEventListener('input',renderAppointments);
+usersSearch?.addEventListener('input',renderUsers);
 </script>
 </body>
 </html>
