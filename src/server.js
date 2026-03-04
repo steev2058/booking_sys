@@ -491,8 +491,8 @@ app.post('/api/admin/login', async (req, res) => {
   if (!loginId) return res.status(400).json({ error: 'employee_no required' });
   const data = await read();
   const user = data.dashboard_users.find(u => String(u.employee_no || '') === loginId && Number(u.active) === 1);
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-  if (!bcrypt.compareSync(password || '', user.password_hash)) return res.status(401).json({ error: 'Invalid credentials' });
+  if (!user) return res.status(401).json({ error: 'رقم وظيفي غير موجود', code: 'EMPLOYEE_NOT_FOUND' });
+  if (!bcrypt.compareSync(password || '', user.password_hash)) return res.status(401).json({ error: 'كلمة المرور غير صحيحة', code: 'WRONG_PASSWORD' });
   const role = normalizeRole(user.role);
   const token = jwt.sign({ id: user.id, username: user.username, employee_no: user.employee_no || null, role, branch_id: user.branch_id || null }, JWT_SECRET, { expiresIn: '12h' });
   res.json({ token, role, branch_id: user.branch_id || null, employee_no: user.employee_no || null, username: user.username });
