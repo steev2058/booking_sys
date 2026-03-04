@@ -20,9 +20,10 @@ const OTP_MAX_VERIFY_ATTEMPTS = Number(process.env.OTP_MAX_VERIFY_ATTEMPTS || 5)
 const OTP_LOCK_MINUTES = Number(process.env.OTP_LOCK_MINUTES || 30);
 const EMPLOYEE_PREFIX = process.env.EMPLOYEE_PREFIX || '50';
 
-const ROLE_ADMIN_LIKE = ['admin', 'manager'];
+const ROLE_ADMIN_LIKE = ['admin'];
 const ROLE_VIEW_APPOINTMENTS = ['admin', 'manager', 'employee', 'branch_employee'];
 const ROLE_DAY_MANAGE = ['admin', 'manager', 'branch_employee'];
+const MANAGER_SCOPED_TO_BRANCH = String(process.env.MANAGER_SCOPED_TO_BRANCH || '1') === '1';
 
 app.use(cors());
 app.use(express.json());
@@ -456,6 +457,9 @@ app.get('/api/admin/appointments', auth(ROLE_VIEW_APPOINTMENTS), async (req, res
   if (req.user.role === 'branch_employee' || req.user.role === 'employee') {
     if (!req.user.branch_id) return res.status(403).json({ error: 'Employee account is not assigned to a branch' });
     rows = rows.filter(a => Number(a.branch_id) === Number(req.user.branch_id));
+  } else if (req.user.role === 'manager' && MANAGER_SCOPED_TO_BRANCH) {
+    if (!req.user.branch_id) return res.status(403).json({ error: 'Manager account is not assigned to a branch' });
+    rows = rows.filter(a => Number(a.branch_id) === Number(req.user.branch_id));
   } else if (branch_id) rows = rows.filter(a => Number(a.branch_id) === Number(branch_id));
   if (day_name) rows = rows.filter(a => a.day_name === String(day_name));
 
@@ -541,7 +545,7 @@ app.delete('/api/admin/companies/:id', auth(ROLE_ADMIN_LIKE), async (req, res) =
 app.get('/api/admin/business-days', auth(ROLE_DAY_MANAGE), async (req, res) => {
   const data = await read();
   let rows = data.business_days;
-  if (req.user.role === 'branch_employee') rows = rows.filter(d => Number(d.branch_id) === Number(req.user.branch_id));
+  if (req.user.role === 'branch_employee' || (req.user.role === 'manager' && MANAGER_SCOPED_TO_BRANCH)) rows = rows.filter(d => Number(d.branch_id) === Number(req.user.branch_id));
   else if (req.query.branch_id) rows = rows.filter(d => Number(d.branch_id) === Number(req.query.branch_id));
   res.json({ business_days: rows.sort((a, b) => Number(b.id) - Number(a.id)) });
 });
@@ -549,7 +553,7 @@ app.get('/api/admin/business-days', auth(ROLE_DAY_MANAGE), async (req, res) => {
 app.post('/api/admin/business-days', auth(ROLE_DAY_MANAGE), async (req, res) => {
   const data = await read();
   let { branch_id, day_name, start_time, end_time, interval_minutes, active } = req.body || {};
-  if (req.user.role === 'branch_employee') branch_id = req.user.branch_id;
+  if (req.user.role === 'branch_employee' || (req.user.role === 'manager' && MANAGER_SCOPED_TO_BRANCH)) branch_id = req.user.branch_id;
   data.business_days.push({
     id: nextId(data, 'business_days'),
     branch_id: Number(branch_id),
@@ -567,9 +571,9 @@ app.put('/api/admin/business-days/:id', auth(ROLE_DAY_MANAGE), async (req, res) 
   const data = await read();
   const row = data.business_days.find(d => Number(d.id) === Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Not found' });
-  if (req.user.role === 'branch_employee' && Number(row.branch_id) !== Number(req.user.branch_id)) return res.status(403).json({ error: 'Forbidden for other branch' });
+  if ((req.user.role === 'branch_employee' || (req.user.role === 'manager' && MANAGER_SCOPED_TO_BRANCH)) && Number(row.branch_id) !== Number(req.user.branch_id)) return res.status(403).json({ error: 'Forbidden for other branch' });
   let { branch_id, day_name, start_time, end_time, interval_minutes, active } = req.body || {};
-  if (req.user.role === 'branch_employee') branch_id = req.user.branch_id;
+  if (req.user.role === 'branch_employee' || (req.user.role === 'manager' && MANAGER_SCOPED_TO_BRANCH)) branch_id = req.user.branch_id;
   row.branch_id = Number(branch_id);
   row.day_name = day_name;
   row.start_time = start_time;
@@ -584,7 +588,7 @@ app.delete('/api/admin/business-days/:id', auth(ROLE_DAY_MANAGE), async (req, re
   const data = await read();
   const row = data.business_days.find(d => Number(d.id) === Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Not found' });
-  if (req.user.role === 'branch_employee' && Number(row.branch_id) !== Number(req.user.branch_id)) return res.status(403).json({ error: 'Forbidden for other branch' });
+  if ((req.user.role === 'branch_employee' || (req.user.role === 'manager' && MANAGER_SCOPED_TO_BRANCH)) && Number(row.branch_id) !== Number(req.user.branch_id)) return res.status(403).json({ error: 'Forbidden for other branch' });
   data.business_days = data.business_days.filter(d => Number(d.id) !== Number(req.params.id));
   await write(data);
   res.json({ ok: true });
@@ -612,7 +616,7 @@ app.post('/api/admin/users', auth(['admin']), async (req, res) => {
   const cleanRole = normalizeRole(role);
   if (!cleanUsername || !cleanName) return res.status(400).json({ error: 'username/full_name required' });
   if (!['manager', 'employee'].includes(cleanRole)) return res.status(400).json({ error: 'role must be manager or employee' });
-  if (cleanRole === 'employee' && !Number(branch_id)) return res.status(400).json({ error: 'branch_id required for employee' });
+  if ((cleanRole === 'employee' || (cleanRole === 'manager' && MANAGER_SCOPED_TO_BRANCH)) && !Number(branch_id)) return res.status(400).json({ error: 'branch_id required for this role' });
   if (data.dashboard_users.some(u => u.username === cleanUsername)) return res.status(409).json({ error: 'username already exists' });
 
   const employeeNo = generateEmployeeNo(data);
@@ -625,7 +629,7 @@ app.post('/api/admin/users', auth(['admin']), async (req, res) => {
     full_name: cleanName,
     password_hash: bcrypt.hashSync(passwordPlain, 10),
     role: cleanRole,
-    branch_id: cleanRole === 'employee' ? Number(branch_id || 0) || null : null,
+    branch_id: (cleanRole === 'employee' || (cleanRole === 'manager' && MANAGER_SCOPED_TO_BRANCH)) ? Number(branch_id || 0) || null : null,
     active: Number(active ?? 1)
   });
 
@@ -646,8 +650,8 @@ app.put('/api/admin/users/:id', auth(['admin']), async (req, res) => {
     row.role = nextRole;
   }
   if (branch_id !== undefined) row.branch_id = Number(branch_id || 0) || null;
-  if ((nextRole === 'employee' || nextRole === 'branch_employee') && !Number(row.branch_id || 0)) {
-    return res.status(400).json({ error: 'branch_id required for employee' });
+  if ((nextRole === 'employee' || nextRole === 'branch_employee' || (nextRole === 'manager' && MANAGER_SCOPED_TO_BRANCH)) && !Number(row.branch_id || 0)) {
+    return res.status(400).json({ error: 'branch_id required for this role' });
   }
   if (active !== undefined) row.active = Number(active ? 1 : 0);
 
