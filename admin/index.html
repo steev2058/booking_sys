@@ -73,7 +73,7 @@
     <div class="muted" style="margin-bottom:14px">الدخول يتم عبر الرقم الوظيفي وكلمة المرور.</div>
     <div class="row">
       <div class="field"><label>الرقم الوظيفي</label><input id="u" placeholder="مثال: 50021" inputmode="numeric"></div>
-      <div class="field"><label>كلمة المرور</label><div style="display:flex;gap:6px"><input id="p" type="password" placeholder="********"><button type="button" class="ghost" onclick="togglePass(this)" style="min-width:88px">إظهار</button></div></div>
+      <div class="field"><label>كلمة المرور</label><div style="position:relative"><input id="p" type="password" placeholder="********" style="padding-left:42px"><button type="button" onclick="togglePass(this)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:#607d8b;font-size:18px;cursor:pointer" title="إظهار/إخفاء كلمة المرور">👁️</button></div></div>
       <button onclick="login()" style="min-width:120px">دخول</button>
     </div>
   </div>
@@ -180,7 +180,7 @@
 let token=''; let role=''; let myBranchId=null; let branchesCache=[]; let apptsCache=[]; let usersCache=[];
 async function j(u,o={}){const r=await fetch(u,o);return await r.json()}
 function esc(v){return String(v??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function togglePass(btn){const el=document.getElementById('p');if(!el)return;el.type=el.type==='password'?'text':'password';if(btn)btn.textContent=el.type==='password'?'إظهار':'إخفاء'}
+function togglePass(btn){const el=document.getElementById('p');if(!el)return;el.type=el.type==='password'?'text':'password';if(btn)btn.textContent=el.type==='password'?'👁️':'🙈'}
 function branchSelectHtml(id,val){const opts=['<option value="">--</option>',...branchesCache.map(b=>`<option value="${b.id}" ${Number(val)===Number(b.id)?'selected':''}>${esc(b.name)} (${esc(b.code)})</option>`)].join('');return `<select id='${id}'>${opts}</select>`}
 function roleLabel(r){return r==='admin'?'Admin':(r==='manager'?'Manager':'Employee')}
 const h=()=>({Authorization:'Bearer '+token,'content-type':'application/json'});
