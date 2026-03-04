@@ -16,12 +16,20 @@
     .logo{height:52px}.service{background:linear-gradient(120deg,var(--orange),var(--red));color:#fff;padding:10px 18px;border-radius:0 0 0 26px;font-weight:800}
     .main{max-width:1280px;margin:16px auto;padding:0 12px}
     .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 8px 22px rgba(0,0,0,.05)}
-    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.tab{padding:9px 14px;border:2px solid #b0bec5;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;color:#546e7a}.tab.active{background:var(--gray);border-color:var(--gray);color:#fff}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;position:sticky;top:0;background:#f5f6f8;padding:8px 0;z-index:9}
+    .tab{padding:9px 14px;border:2px solid #b0bec5;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;color:#546e7a;transition:.2s}
+    .tab:hover{transform:translateY(-1px)}
+    .tab.active{background:var(--gray);border-color:var(--gray);color:#fff}
     .section{display:none}.section.active{display:block}
     .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.col{flex:1;min-width:170px}
+    .field{display:flex;flex-direction:column;gap:6px;min-width:170px;flex:1}
+    .field label{font-size:12px;color:#607d8b;font-weight:800}
     input,select{width:100%;padding:10px;border:2px solid #cfd8dc;border-radius:12px;background:#fff;font-weight:700}
     input:focus,select:focus{outline:none;border-color:var(--orange)}
     button{padding:9px 12px;border:0;border-radius:10px;background:linear-gradient(120deg,var(--orange),var(--red));color:#fff;font-weight:800;cursor:pointer}
+    .toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+    .chip-info{background:#eceff1;border:1px solid #cfd8dc;border-radius:999px;padding:6px 10px;font-weight:800;color:#455a64}
+    .muted{color:#607d8b;font-size:13px;margin-top:-4px;margin-bottom:10px}
     button.ghost{background:#eceff1;color:#455a64}
     button.danger{background:#b71c1c}
     .table-wrap{overflow:auto;-webkit-overflow-scrolling:touch}
@@ -57,7 +65,11 @@
   </div>
 
   <div id="panel" class="hide">
-    <div class="row" style="justify-content:flex-start;margin-bottom:8px">
+    <div class="toolbar">
+      <div class="row">
+        <div class="chip-info" id="whoami">-</div>
+        <div class="chip-info" id="branchScope">-</div>
+      </div>
       <button class="ghost" onclick="logout()">تسجيل خروج</button>
     </div>
     <div class="tabs">
@@ -70,8 +82,13 @@
 
     <div id="sec-appts" class="section active card">
       <h3>المواعيد</h3>
-      <div class="row"><div class="col"><input id="f" placeholder="فلترة branch_id"></div><div class="col"><input id="d" placeholder="فلترة day_name"></div><button onclick="loadAppointments()">فلترة</button></div>
-      <div class="table-wrap"><table><thead><tr><th>ID</th><th>الفرع</th><th>الشركة</th><th>اليوم</th><th>الوقت</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="tb"></tbody></table></div>
+      <div class="muted">عرض المواعيد مع الفلترة حسب الفرع واليوم.</div>
+      <div class="row">
+        <div class="field"><label>معرّف الفرع</label><input id="f" placeholder="مثال: 2"></div>
+        <div class="field"><label>اسم اليوم</label><input id="d" placeholder="Sunday"></div>
+        <button onclick="loadAppointments()">تحديث</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>ID</th><th>الفرع</th><th>الشركة</th><th>التاريخ</th><th>اليوم</th><th>من</th><th>إلى</th><th>الاسم</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="tb"></tbody></table></div>
     </div>
 
     <div id="sec-branches" class="section card">
@@ -94,17 +111,18 @@
 
     <div id="sec-users" class="section card">
       <h3>إدارة مستخدمي لوحة التحكم</h3>
+      <div class="muted">الإدارة فقط تستطيع إضافة المستخدمين وتحديد الصلاحيات.</div>
       <div class="row">
-        <div class="col"><input id="new_username" placeholder="اسم المستخدم"></div>
-        <div class="col"><input id="new_full_name" placeholder="الاسم الكامل"></div>
-        <div class="col"><input id="new_employee_no" placeholder="الرقم الوظيفي (مثال 50XXX)"></div>
-        <div class="col">
+        <div class="field"><label>اسم المستخدم</label><input id="new_username" placeholder="username"></div>
+        <div class="field"><label>الاسم الكامل</label><input id="new_full_name" placeholder="الاسم الكامل"></div>
+        <div class="field"><label>الرقم الوظيفي</label><input id="new_employee_no" placeholder="مثال 50023"></div>
+        <div class="field"><label>الدور</label>
           <select id="new_role">
-            <option value="manager">Manager (جميع الصلاحيات)</option>
-            <option value="employee">Employee (عرض المواعيد فقط)</option>
+            <option value="manager">Manager (صلاحيات فرعه)</option>
+            <option value="employee">Employee (عرض مواعيد الفرع فقط)</option>
           </select>
         </div>
-        <div class="col"><select id="new_branch_id"><option value="">اختر الفرع لمستخدم employee</option></select></div>
+        <div class="field"><label>الفرع</label><select id="new_branch_id"><option value="">اختر الفرع</option></select></div>
         <button onclick="addUser()">إضافة مستخدم</button>
       </div>
       <div class="table-wrap"><table><thead><tr><th>ID</th><th>اسم المستخدم</th><th>الرقم الوظيفي</th><th>الاسم الكامل</th><th>الدور</th><th>الفرع</th><th>Active</th><th>إجراءات</th></tr></thead><tbody id="usersTb"></tbody></table></div>
@@ -128,13 +146,14 @@ let token=''; let role=''; let myBranchId=null; let branchesCache=[];
 async function j(u,o={}){const r=await fetch(u,o);return await r.json()}
 function esc(v){return String(v??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function branchSelectHtml(id,val){const opts=['<option value="">--</option>',...branchesCache.map(b=>`<option value="${b.id}" ${Number(val)===Number(b.id)?'selected':''}>${esc(b.name)} (${esc(b.code)})</option>`)].join('');return `<select id='${id}'>${opts}</select>`}
+function roleLabel(r){return r==='admin'?'Admin':(r==='manager'?'Manager':'Employee')}
 const h=()=>({Authorization:'Bearer '+token,'content-type':'application/json'});
 function showToast(text, ok=true){const t=document.getElementById('toast');t.textContent=text;t.style.background=ok?'#1b5e20':'#b00020';t.style.display='block';clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.style.display='none',2500)}
 function confirmAction(text){return new Promise((resolve)=>{const m=document.getElementById('confirmModal');document.getElementById('confirmText').textContent=text;m.style.display='flex';document.getElementById('confirmYes').onclick=()=>{m.style.display='none';resolve(true)};document.getElementById('confirmNo').onclick=()=>{m.style.display='none';resolve(false)};});}
 function showSection(name){['appts','branches','companies','days','users'].forEach(k=>{document.getElementById('sec-'+k).classList.toggle('active',k===name);document.getElementById('tab-'+k).classList.toggle('active',k===name)});if(role==='employee'&&name!=='appts')showSection('appts');if(role==='manager'&&name==='users')showSection('appts');}
-function logout(){token='';role='';myBranchId=null;panel.classList.add('hide');loginCard.classList.remove('hide');u.value='';p.value='';document.getElementById('tab-branches').style.display='';document.getElementById('tab-companies').style.display='';document.getElementById('tab-days').style.display='';document.getElementById('tab-users').style.display='';showToast('تم تسجيل الخروج بنجاح');}
-async function login(){const r=await j('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({employee_no:u.value,username:u.value,password:p.value})});if(!r.token){showToast(r.error||'فشل تسجيل الدخول',false);return;}token=r.token;role=r.role;myBranchId=r.branch_id;loginCard.classList.add('hide');panel.classList.remove('hide');if(role==='employee'){document.getElementById('tab-branches').style.display='none';document.getElementById('tab-companies').style.display='none';document.getElementById('tab-days').style.display='none';document.getElementById('tab-users').style.display='none';d_branch.value=myBranchId||'';}else if(role==='manager'){document.getElementById('tab-branches').style.display='none';document.getElementById('tab-companies').style.display='none';document.getElementById('tab-users').style.display='none';d_branch.value=myBranchId||'';}await loadAppointments();if(role==='admin'){await loadBranches();await loadCompanies();await loadDays();await loadUsers();}else if(role==='manager'){await loadDays();}showToast('تم تسجيل الدخول بنجاح');}
-async function loadAppointments(){const q=[];if(f.value)q.push('branch_id='+encodeURIComponent(f.value));if(d.value)q.push('day_name='+encodeURIComponent(d.value));const r=await j('/api/admin/appointments'+(q.length?'?'+q.join('&'):''),{headers:{Authorization:'Bearer '+token}});tb.innerHTML=(r.appointments||[]).map(x=>`<tr><td>${x.id}</td><td>${x.branch_name}</td><td>${x.company_name}</td><td>${x.day_name}</td><td>${x.slot_time}</td><td>${x.phone}</td><td>${x.status}</td><td>${role==='admin'?`<button class="danger" onclick="delAppt(${x.id})">حذف</button>`:''}</td></tr>`).join('');}
+function logout(){token='';role='';myBranchId=null;panel.classList.add('hide');loginCard.classList.remove('hide');u.value='';p.value='';document.getElementById('whoami').textContent='-';document.getElementById('branchScope').textContent='-';document.getElementById('tab-branches').style.display='';document.getElementById('tab-companies').style.display='';document.getElementById('tab-days').style.display='';document.getElementById('tab-users').style.display='';showToast('تم تسجيل الخروج بنجاح');}
+async function login(){const r=await j('/api/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({employee_no:u.value,username:u.value,password:p.value})});if(!r.token){showToast(r.error||'فشل تسجيل الدخول',false);return;}token=r.token;role=r.role;myBranchId=r.branch_id;loginCard.classList.add('hide');panel.classList.remove('hide');document.getElementById('whoami').textContent=`المستخدم: ${r.username||u.value} | الدور: ${roleLabel(role)}`;document.getElementById('branchScope').textContent=`نطاق الفرع: ${myBranchId||'جميع الفروع'}`;if(role==='employee'){document.getElementById('tab-branches').style.display='none';document.getElementById('tab-companies').style.display='none';document.getElementById('tab-days').style.display='none';document.getElementById('tab-users').style.display='none';d_branch.value=myBranchId||'';}else if(role==='manager'){document.getElementById('tab-branches').style.display='none';document.getElementById('tab-companies').style.display='none';document.getElementById('tab-users').style.display='none';d_branch.value=myBranchId||'';}await loadAppointments();if(role==='admin'){await loadBranches();await loadCompanies();await loadDays();await loadUsers();}else if(role==='manager'){await loadDays();}showToast('تم تسجيل الدخول بنجاح');}
+async function loadAppointments(){const q=[];if(f.value)q.push('branch_id='+encodeURIComponent(f.value));if(d.value)q.push('day_name='+encodeURIComponent(d.value));const r=await j('/api/admin/appointments'+(q.length?'?'+q.join('&'):''),{headers:{Authorization:'Bearer '+token}});tb.innerHTML=(r.appointments||[]).map(x=>`<tr><td>${x.id}</td><td>${x.branch_name}</td><td>${x.company_name}</td><td>${x.booking_date||''}</td><td>${x.day_name}</td><td>${x.slot_time||''}</td><td>${x.slot_to||''}</td><td>${x.full_name||''}</td><td>${x.phone}</td><td>${x.status}</td><td>${role==='admin'?`<button class="danger" onclick="delAppt(${x.id})">حذف</button>`:''}</td></tr>`).join('');}
 async function delAppt(id){if(!await confirmAction('تأكيد حذف هذا الموعد؟'))return;await fetch('/api/admin/appointments/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});await loadAppointments();showToast('تم حذف الموعد');}
 async function loadBranches(){const r=await j('/api/admin/branches',{headers:{Authorization:'Bearer '+token}});branchesCache=(r.branches||[]);branchesTb.innerHTML=branchesCache.map(x=>`<tr><td>${x.id}</td><td><input id='bc_${x.id}' value='${x.code}'></td><td><input id='bn_${x.id}' value='${x.name}'></td><td><input id='bl_${x.id}' value='${x.location}'></td><td><select id='ba_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td><td><button class='ghost' onclick='updBranch(${x.id})'>تعديل</button> <button class='danger' onclick='delBranch(${x.id})'>حذف</button></td></tr>`).join('');new_branch_id.innerHTML=['<option value="">اختر الفرع لمستخدم employee</option>',...branchesCache.filter(b=>Number(b.active)===1).map(b=>`<option value="${b.id}">${esc(b.name)} (${esc(b.code)})</option>`)].join('');}
 async function addBranch(){await fetch('/api/admin/branches',{method:'POST',headers:h(),body:JSON.stringify({code:b_code.value,name:b_name.value,location:b_loc.value})});await loadBranches();showToast('تمت إضافة الفرع');}
