@@ -82,13 +82,13 @@ async function write(data) {
       await conn.query('INSERT INTO business_days (id, branch_id, day_name, start_time, end_time, interval_minutes, active) VALUES (?,?,?,?,?,?,?)', [r.id, r.branch_id, r.day_name, r.start_time, r.end_time, Number(r.interval_minutes || 60), Number(r.active || 0)]);
     }
     for (const r of data.appointments || []) {
-      await conn.query('INSERT INTO appointments (id, transfer_number, branch_id, company_id, day_name, slot_time, phone, status, created_at) VALUES (?,?,?,?,?,?,?,?,?)', [r.id, r.transfer_number, r.branch_id, r.company_id, r.day_name, r.slot_time, r.phone, r.status || 'booked', toMysqlDate(r.created_at)]);
+      await conn.query('INSERT INTO appointments (id, transfer_number, branch_id, company_id, day_name, booking_date, slot_time, slot_to, phone, full_name, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [r.id, r.transfer_number, r.branch_id, r.company_id, r.day_name, r.booking_date || null, r.slot_time, r.slot_to || null, r.phone, r.full_name || null, r.status || 'booked', toMysqlDate(r.created_at)]);
     }
     for (const r of data.dashboard_users || []) {
       await conn.query('INSERT INTO dashboard_users (id, username, password_hash, role, branch_id, active) VALUES (?,?,?,?,?,?)', [r.id, r.username, r.password_hash, r.role, r.branch_id || null, Number(r.active || 0)]);
     }
     for (const r of data.otp_codes || []) {
-      await conn.query('INSERT INTO otp_codes (id, phone, code, transfer_number, expires_at, used, created_at) VALUES (?,?,?,?,?,?,?)', [r.id, r.phone, r.code, r.transfer_number, toMysqlDate(r.expires_at), Number(r.used || 0), toMysqlDate(r.created_at)]);
+      await conn.query('INSERT INTO otp_codes (id, phone, full_name, code, transfer_number, expires_at, used, created_at) VALUES (?,?,?,?,?,?,?,?)', [r.id, r.phone, r.full_name || null, r.code, r.transfer_number, toMysqlDate(r.expires_at), Number(r.used || 0), toMysqlDate(r.created_at)]);
     }
     for (const r of data.otp_security || []) {
       await conn.query('INSERT INTO otp_security (phone, send_count, window_start, verify_fail_count, locked_until) VALUES (?,?,?,?,?)', [r.phone, Number(r.send_count || 0), toMysqlDate(r.window_start), Number(r.verify_fail_count || 0), toMysqlDate(r.locked_until)]);

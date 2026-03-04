@@ -33,11 +33,15 @@ CREATE TABLE IF NOT EXISTS appointments (
   branch_id INT NOT NULL,
   company_id INT NOT NULL,
   day_name VARCHAR(50) NOT NULL,
+  booking_date DATE NULL,
   slot_time VARCHAR(10) NOT NULL,
+  slot_to VARCHAR(10) NULL,
   phone VARCHAR(30) NOT NULL,
+  full_name VARCHAR(160) NULL,
   status VARCHAR(30) NOT NULL DEFAULT 'booked',
   created_at DATETIME NULL,
   INDEX idx_appt_branch_day_slot (branch_id, day_name, slot_time),
+  INDEX idx_appt_booking_date (booking_date),
   INDEX idx_appt_phone (phone)
 );
 
@@ -53,6 +57,7 @@ CREATE TABLE IF NOT EXISTS dashboard_users (
 CREATE TABLE IF NOT EXISTS otp_codes (
   id INT PRIMARY KEY,
   phone VARCHAR(30) NOT NULL,
+  full_name VARCHAR(160) NULL,
   code VARCHAR(10) NOT NULL,
   transfer_number VARCHAR(80) NOT NULL,
   expires_at DATETIME NOT NULL,

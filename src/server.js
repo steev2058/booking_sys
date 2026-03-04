@@ -196,7 +196,16 @@ function ensureDefaultBusinessDays(data, branchId) {
         interval_minutes: 30,
         active: 1
       });
+    } else {
+      exists.start_time = '10:00';
+      exists.end_time = '14:00';
+      exists.interval_minutes = 30;
+      exists.active = 1;
     }
+  }
+  // Friday is non-working by default
+  for (const row of data.business_days.filter(d => Number(d.branch_id) === Number(branchId) && d.day_name === 'Friday')) {
+    row.active = 0;
   }
 }
 
@@ -326,13 +335,14 @@ app.post('/api/send-otp', async (req, res) => {
 });
 
 app.post('/api/book', async (req, res) => {
-  const { transfer_number, branch_id, company_id, booking_date, slot_time, phone, full_name, otp_code } = req.body || {};
-  if (!transfer_number || !branch_id || !company_id || !booking_date || !slot_time || !phone || !full_name || !otp_code) return res.status(400).json({ error: 'Missing required fields' });
+  const { transfer_number, branch_id, company_id, booking_date, slot_time, phone, full_name, otp_code, captcha_answer, captcha_token } = req.body || {};
+  if (!transfer_number || !branch_id || !company_id || !booking_date || !slot_time || !phone || !full_name || !otp_code || !captcha_answer || !captcha_token) return res.status(400).json({ error: 'Missing required fields' });
   if (!isValidPhone(phone)) return res.status(400).json({ success: false, message: 'رقم الهاتف يجب أن يكون 10 خانات' });
 
   const data = await read();
   const locked = ensureNotLocked(data, phone);
   if (!locked.ok) return res.status(429).json({ success: false, message: 'تم قفل المحاولات مؤقتاً، حاول لاحقاً' });
+  if (!verifyCaptcha(captcha_answer, captcha_token)) return res.status(400).json({ success: false, message: 'فشل التحقق من الكابتشا' });
 
   const cleanName = String(full_name || '').trim();
   const otp = [...data.otp_codes].reverse().find(o => o.phone === phone && o.transfer_number === transfer_number && o.code === otp_code);

@@ -44,7 +44,7 @@ async function main() {
   }
 
   for (const r of raw.appointments || []) {
-    await conn.execute('INSERT INTO appointments (id, transfer_number, branch_id, company_id, day_name, slot_time, phone, status, created_at) VALUES (?,?,?,?,?,?,?,?,?)', [r.id, r.transfer_number, r.branch_id, r.company_id, r.day_name, r.slot_time, r.phone, r.status || 'booked', toMySqlDate(r.created_at)]);
+    await conn.execute('INSERT INTO appointments (id, transfer_number, branch_id, company_id, day_name, booking_date, slot_time, slot_to, phone, full_name, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [r.id, r.transfer_number, r.branch_id, r.company_id, r.day_name, r.booking_date || null, r.slot_time, r.slot_to || null, r.phone, r.full_name || null, r.status || 'booked', toMySqlDate(r.created_at)]);
   }
 
   for (const r of raw.dashboard_users || []) {
@@ -52,7 +52,7 @@ async function main() {
   }
 
   for (const r of raw.otp_codes || []) {
-    await conn.execute('INSERT INTO otp_codes (id, phone, code, transfer_number, expires_at, used, created_at) VALUES (?,?,?,?,?,?,?)', [r.id, r.phone, r.code, r.transfer_number, toMySqlDate(r.expires_at), Number(r.used || 0), toMySqlDate(r.created_at)]);
+    await conn.execute('INSERT INTO otp_codes (id, phone, full_name, code, transfer_number, expires_at, used, created_at) VALUES (?,?,?,?,?,?,?,?)', [r.id, r.phone, r.full_name || null, r.code, r.transfer_number, toMySqlDate(r.expires_at), Number(r.used || 0), toMySqlDate(r.created_at)]);
   }
 
   for (const r of raw.otp_security || []) {
