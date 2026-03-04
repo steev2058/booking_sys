@@ -40,7 +40,40 @@ function auth(requiredRoles = []) {
   };
 }
 
-function makeSlots(start, end, interval = 60) {
+const EN_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const AR_DAYS = {
+  Sunday: 'الأحد',
+  Monday: 'الإثنين',
+  Tuesday: 'الثلاثاء',
+  Wednesday: 'الأربعاء',
+  Thursday: 'الخميس',
+  Friday: 'الجمعة',
+  Saturday: 'السبت'
+};
+
+function ymd(d) {
+  const dt = new Date(d);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+
+function fromYmd(s) {
+  const [y, m, d] = String(s).split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function addWorkingDays(startDateYmd, daysToAdd, allowedDayNames, holidaysSet = new Set()) {
+  let d = fromYmd(startDateYmd);
+  let added = 0;
+  while (added < daysToAdd) {
+    d.setDate(d.getDate() + 1);
+    const en = EN_DAYS[d.getDay()];
+    const key = ymd(d);
+    if (allowedDayNames.includes(en) && !holidaysSet.has(key)) added += 1;
+  }
+  return ymd(d);
+}
+
+function makeSlots(start, end, interval = 30) {
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
   const out = [];
@@ -149,13 +182,40 @@ function resetVerifyFail(data, phone) {
   sec.locked_until = null;
 }
 
-async function sendSmsOtp(phone, code) {
-  const msg = `رمز التحقق الخاص بك هو: ${code}`;
+function ensureDefaultBusinessDays(data, branchId) {
+  const defaults = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+  for (const day of defaults) {
+    const exists = data.business_days.find(d => Number(d.branch_id) === Number(branchId) && d.day_name === day);
+    if (!exists) {
+      data.business_days.push({
+        id: nextId(data, 'business_days'),
+        branch_id: Number(branchId),
+        day_name: day,
+        start_time: '10:00',
+        end_time: '14:00',
+        interval_minutes: 30,
+        active: 1
+      });
+    }
+  }
+}
+
+function calcSlotEnd(slotStart, minutes = 30) {
+  const [h, m] = String(slotStart).split(':').map(Number);
+  const total = h * 60 + m + minutes;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+async function sendSmsRaw(phone, msg) {
   const qs = new URLSearchParams({ User: SMS_USER, Pass: SMS_PASS, From: SMS_FROM, Gsm: phone, Msg: msg, Lang: '0' });
   const url = `${SMS_ENDPOINT}?${qs.toString()}`;
   const r = await fetch(url, { method: 'GET' });
   const text = await r.text();
   return { ok: r.ok, text: (text || '').slice(0, 500) };
+}
+
+async function sendSmsOtp(phone, code) {
+  return sendSmsRaw(phone, `رمز التحقق الخاص بك هو: ${code}`);
 }
 
 app.get('/api/branches', async (_req, res) => {
@@ -172,21 +232,59 @@ app.get('/api/business-days', async (req, res) => {
   const branchId = Number(req.query.branch_id);
   if (!branchId) return res.status(400).json({ error: 'branch_id required' });
   const data = await read();
-  res.json({ days: data.business_days.filter(d => Number(d.branch_id) === branchId && Number(d.active) === 1) });
+
+  ensureDefaultBusinessDays(data, branchId);
+  await write(data);
+
+  const rows = data.business_days.filter(d => Number(d.branch_id) === branchId && Number(d.active) === 1);
+  const allowed = rows.map(r => r.day_name);
+  const holidaysSet = new Set((data.holidays || []).map(h => h.date));
+
+  const upcoming = [];
+  let cursor = new Date();
+  for (let i = 0; i < 30 && upcoming.length < 14; i += 1) {
+    const en = EN_DAYS[cursor.getDay()];
+    const date = ymd(cursor);
+    const cfg = rows.find(r => r.day_name === en);
+    if (cfg && !holidaysSet.has(date)) {
+      upcoming.push({
+        date,
+        day_name: en,
+        day_name_ar: AR_DAYS[en] || en,
+        start_time: cfg.start_time,
+        end_time: cfg.end_time,
+        interval_minutes: Number(cfg.interval_minutes || 30)
+      });
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  res.json({ days: upcoming });
 });
 
 app.get('/api/slots', async (req, res) => {
   const branchId = Number(req.query.branch_id);
-  const dayName = String(req.query.day_name || '');
-  if (!branchId || !dayName) return res.status(400).json({ error: 'branch_id/day_name required' });
+  const bookingDate = String(req.query.booking_date || '');
+  if (!branchId || !bookingDate) return res.status(400).json({ error: 'branch_id/booking_date required' });
+
   const data = await read();
+  const dayName = EN_DAYS[fromYmd(bookingDate).getDay()];
   const day = data.business_days.find(d => Number(d.branch_id) === branchId && d.day_name === dayName && Number(d.active) === 1);
   if (!day) return res.status(404).json({ error: 'Day config not found' });
 
-  const allSlots = makeSlots(day.start_time, day.end_time, day.interval_minutes || 60);
-  const booked = data.appointments.filter(a => Number(a.branch_id) === branchId && a.day_name === dayName && a.status === 'booked').map(a => a.slot_time);
-  const slots = allSlots.map(t => ({ time: t, available: !booked.includes(t) }));
-  res.json({ slots, day });
+  const allSlots = makeSlots(day.start_time, day.end_time, Number(day.interval_minutes || 30));
+  const bookedForDate = data.appointments.filter(a => Number(a.branch_id) === branchId && a.booking_date === bookingDate && a.status === 'booked');
+  const slots = allSlots.map(t => {
+    const count = bookedForDate.filter(b => b.slot_time === t).length;
+    return {
+      time: t,
+      to_time: calcSlotEnd(t, Number(day.interval_minutes || 30)),
+      booked_count: count,
+      capacity: 3,
+      available: count < 3
+    };
+  });
+  res.json({ slots, day: { ...day, booking_date: bookingDate, day_name: dayName } });
 });
 
 app.get('/api/captcha', (_req, res) => {
@@ -195,8 +293,8 @@ app.get('/api/captcha', (_req, res) => {
 });
 
 app.post('/api/send-otp', async (req, res) => {
-  const { phone, transfer_number, captcha_answer, captcha_token } = req.body || {};
-  if (!phone || !transfer_number || !captcha_answer || !captcha_token) return res.status(400).json({ error: 'Missing fields' });
+  const { phone, full_name, transfer_number, captcha_answer, captcha_token } = req.body || {};
+  if (!phone || !full_name || !transfer_number || !captcha_answer || !captcha_token) return res.status(400).json({ error: 'Missing fields' });
   if (!isValidPhone(phone)) return res.status(400).json({ error: 'Phone must be exactly 10 digits' });
 
   const data = await read();
@@ -209,6 +307,7 @@ app.post('/api/send-otp', async (req, res) => {
   data.otp_codes.push({
     id: nextId(data, 'otp_codes'),
     phone,
+    full_name: String(full_name || '').trim(),
     code,
     transfer_number,
     expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
@@ -227,14 +326,15 @@ app.post('/api/send-otp', async (req, res) => {
 });
 
 app.post('/api/book', async (req, res) => {
-  const { transfer_number, branch_id, company_id, day_name, slot_time, phone, otp_code } = req.body || {};
-  if (!transfer_number || !branch_id || !company_id || !day_name || !slot_time || !phone || !otp_code) return res.status(400).json({ error: 'Missing required fields' });
+  const { transfer_number, branch_id, company_id, booking_date, slot_time, phone, full_name, otp_code } = req.body || {};
+  if (!transfer_number || !branch_id || !company_id || !booking_date || !slot_time || !phone || !full_name || !otp_code) return res.status(400).json({ error: 'Missing required fields' });
   if (!isValidPhone(phone)) return res.status(400).json({ success: false, message: 'رقم الهاتف يجب أن يكون 10 خانات' });
 
   const data = await read();
   const locked = ensureNotLocked(data, phone);
   if (!locked.ok) return res.status(429).json({ success: false, message: 'تم قفل المحاولات مؤقتاً، حاول لاحقاً' });
 
+  const cleanName = String(full_name || '').trim();
   const otp = [...data.otp_codes].reverse().find(o => o.phone === phone && o.transfer_number === transfer_number && o.code === otp_code);
   if (!otp || Number(otp.used) === 1) {
     const t = trackVerifyFail(data, phone);
@@ -244,23 +344,58 @@ app.post('/api/book', async (req, res) => {
   }
   if (new Date(otp.expires_at).getTime() < Date.now()) return res.status(400).json({ success: false, message: 'انتهت صلاحية رمز التحقق' });
 
-  const duplicate = data.appointments.find(a => Number(a.branch_id) === Number(branch_id) && a.day_name === day_name && a.slot_time === slot_time && a.status === 'booked');
-  if (duplicate) return res.status(409).json({ success: false, message: 'فشل عملية الحجز يرجى اختيار وقت آخر' });
+  const dayName = EN_DAYS[fromYmd(booking_date).getDay()];
+  const dayCfg = data.business_days.find(d => Number(d.branch_id) === Number(branch_id) && d.day_name === dayName && Number(d.active) === 1);
+  if (!dayCfg) return res.status(400).json({ success: false, message: 'اليوم غير متاح للحجز' });
+
+  const holidaysSet = new Set((data.holidays || []).map(h => h.date));
+  if (holidaysSet.has(booking_date)) return res.status(400).json({ success: false, message: 'هذا اليوم عطلة ولا يمكن الحجز فيه' });
+
+  const allowedDayNames = data.business_days
+    .filter(d => Number(d.branch_id) === Number(branch_id) && Number(d.active) === 1)
+    .map(d => d.day_name);
+
+  const relatedBookings = data.appointments.filter(a => a.status === 'booked' && (String(a.phone || '') === String(phone) || String(a.full_name || '') === cleanName));
+  for (const b of relatedBookings) {
+    if (!b.booking_date) continue;
+    const earliest = addWorkingDays(b.booking_date, 2, allowedDayNames, holidaysSet);
+    if (booking_date < earliest) {
+      return res.status(409).json({
+        success: false,
+        message: `لا يمكن حجز موعد جديد قبل يومي عمل. أقرب تاريخ متاح: ${earliest}`
+      });
+    }
+  }
+
+  const sameSlotCount = data.appointments.filter(a => Number(a.branch_id) === Number(branch_id) && a.booking_date === booking_date && a.slot_time === slot_time && a.status === 'booked').length;
+  if (sameSlotCount >= 3) return res.status(409).json({ success: false, message: 'هذه الشريحة ممتلئة، الرجاء اختيار وقت آخر' });
 
   data.appointments.push({
     id: nextId(data, 'appointments'),
     transfer_number,
     branch_id: Number(branch_id),
     company_id: Number(company_id),
-    day_name,
+    day_name: dayName,
+    booking_date,
     slot_time,
+    slot_to: calcSlotEnd(slot_time, Number(dayCfg.interval_minutes || 30)),
     phone,
+    full_name: cleanName,
     status: 'booked',
     created_at: nowISO()
   });
   otp.used = 1;
   resetVerifyFail(data, phone);
   await write(data);
+
+  const branch = data.branches.find(b => Number(b.id) === Number(branch_id));
+  const smsMessage = `السيد ${cleanName} تم حجز دور لمراجعة فرع ${branch?.name || ''} لاستلام حوالة ${transfer_number} من الساعة ${slot_time} إلى الساعة ${calcSlotEnd(slot_time, Number(dayCfg.interval_minutes || 30))} بتاريخ ${booking_date}.`;
+  try {
+    await sendSmsRaw(phone, smsMessage);
+  } catch {
+    // ignore confirmation SMS errors so booking remains confirmed
+  }
+
   return res.json({ success: true, message: 'تم حجز الموعد بنجاح' });
 });
 
