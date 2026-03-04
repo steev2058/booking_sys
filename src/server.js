@@ -486,10 +486,11 @@ app.post('/api/book', async (req, res) => {
 });
 
 app.post('/api/admin/login', async (req, res) => {
-  const { username, employee_no, password } = req.body || {};
-  const loginId = String(employee_no || username || '').trim();
+  const { employee_no, password } = req.body || {};
+  const loginId = String(employee_no || '').trim();
+  if (!loginId) return res.status(400).json({ error: 'employee_no required' });
   const data = await read();
-  const user = data.dashboard_users.find(u => (u.username === loginId || String(u.employee_no || '') === loginId) && Number(u.active) === 1);
+  const user = data.dashboard_users.find(u => String(u.employee_no || '') === loginId && Number(u.active) === 1);
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   if (!bcrypt.compareSync(password || '', user.password_hash)) return res.status(401).json({ error: 'Invalid credentials' });
   const role = normalizeRole(user.role);
