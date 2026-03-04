@@ -453,8 +453,10 @@ app.get('/api/admin/appointments', auth(ROLE_VIEW_APPOINTMENTS), async (req, res
   const data = await read();
   let rows = data.appointments;
 
-  if (req.user.role === 'branch_employee' || req.user.role === 'employee') rows = rows.filter(a => Number(a.branch_id) === Number(req.user.branch_id));
-  else if (branch_id) rows = rows.filter(a => Number(a.branch_id) === Number(branch_id));
+  if (req.user.role === 'branch_employee' || req.user.role === 'employee') {
+    if (!req.user.branch_id) return res.status(403).json({ error: 'Employee account is not assigned to a branch' });
+    rows = rows.filter(a => Number(a.branch_id) === Number(req.user.branch_id));
+  } else if (branch_id) rows = rows.filter(a => Number(a.branch_id) === Number(branch_id));
   if (day_name) rows = rows.filter(a => a.day_name === String(day_name));
 
   const out = rows.map(a => {
@@ -610,6 +612,7 @@ app.post('/api/admin/users', auth(['admin']), async (req, res) => {
   const cleanRole = normalizeRole(role);
   if (!cleanUsername || !cleanName) return res.status(400).json({ error: 'username/full_name required' });
   if (!['manager', 'employee'].includes(cleanRole)) return res.status(400).json({ error: 'role must be manager or employee' });
+  if (cleanRole === 'employee' && !Number(branch_id)) return res.status(400).json({ error: 'branch_id required for employee' });
   if (data.dashboard_users.some(u => u.username === cleanUsername)) return res.status(409).json({ error: 'username already exists' });
 
   const employeeNo = generateEmployeeNo(data);
@@ -637,12 +640,15 @@ app.put('/api/admin/users/:id', auth(['admin']), async (req, res) => {
   const { full_name, role, branch_id, active, reset_password } = req.body || {};
 
   if (full_name !== undefined) row.full_name = String(full_name || '').trim();
+  const nextRole = role !== undefined ? normalizeRole(role) : normalizeRole(row.role);
   if (role !== undefined) {
-    const cleanRole = normalizeRole(role);
-    if (!['admin', 'manager', 'employee', 'branch_employee'].includes(cleanRole)) return res.status(400).json({ error: 'invalid role' });
-    row.role = cleanRole;
+    if (!['admin', 'manager', 'employee', 'branch_employee'].includes(nextRole)) return res.status(400).json({ error: 'invalid role' });
+    row.role = nextRole;
   }
   if (branch_id !== undefined) row.branch_id = Number(branch_id || 0) || null;
+  if ((nextRole === 'employee' || nextRole === 'branch_employee') && !Number(row.branch_id || 0)) {
+    return res.status(400).json({ error: 'branch_id required for employee' });
+  }
   if (active !== undefined) row.active = Number(active ? 1 : 0);
 
   let newPassword = null;
