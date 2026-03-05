@@ -563,10 +563,14 @@ app.get('/api/admin/appointments', auth(ROLE_VIEW_APPOINTMENTS), async (req, res
   res.json({ appointments: out });
 });
 
-app.delete('/api/admin/appointments/:id', auth(ROLE_ADMIN_LIKE), async (req, res) => {
+app.delete('/api/admin/appointments/:id', auth(['admin', 'manager']), async (req, res) => {
   const data = await read();
   const row = data.appointments.find(a => Number(a.id) === Number(req.params.id));
-  if (row) row.status = 'cancelled';
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  if (req.user.role === 'manager' && MANAGER_SCOPED_TO_BRANCH && Number(row.branch_id) !== Number(req.user.branch_id)) {
+    return res.status(403).json({ error: 'Forbidden for other branch' });
+  }
+  row.status = 'cancelled';
   await write(data);
   res.json({ ok: true });
 });
