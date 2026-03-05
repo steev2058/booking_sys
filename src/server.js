@@ -320,9 +320,15 @@ async function generateDailyReportsIfNeeded(dateYmd = ymd(new Date())) {
 async function sendSmsRaw(phone, msg) {
   const qs = new URLSearchParams({ User: SMS_USER, Pass: SMS_PASS, From: SMS_FROM, Gsm: phone, Msg: msg, Lang: '0' });
   const url = `${SMS_ENDPOINT}?${qs.toString()}`;
-  const r = await fetch(url, { method: 'GET' });
-  const text = await r.text();
-  return { ok: r.ok, text: (text || '').slice(0, 500) };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const r = await fetch(url, { method: 'GET', signal: controller.signal });
+    const text = await r.text();
+    return { ok: r.ok, text: (text || '').slice(0, 500) };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function sendSmsOtp(phone, code) {
@@ -502,11 +508,7 @@ app.post('/api/book', async (req, res) => {
 
   const branch = data.branches.find(b => Number(b.id) === Number(branch_id));
   const smsMessage = `السيد ${cleanName} تم حجز دور لمراجعة فرع ${branch?.name || ''} لاستلام حوالة ${transfer_number} من الساعة ${slot_time} إلى الساعة ${calcSlotEnd(slot_time, Number(dayCfg.interval_minutes || 30))} بتاريخ ${booking_date}.`;
-  try {
-    await sendSmsRaw(phone, smsMessage);
-  } catch {
-    // ignore confirmation SMS errors so booking remains confirmed
-  }
+  sendSmsRaw(phone, smsMessage).catch(() => {});
 
   return res.json({ success: true, message: 'تم حجز الموعد بنجاح' });
 });
