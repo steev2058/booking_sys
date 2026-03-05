@@ -79,6 +79,25 @@ function addWorkingDays(startDateYmd, daysToAdd, allowedDayNames, holidaysSet = 
   return ymd(d);
 }
 
+function checkBookingCooldown(data, { phone, booking_date, branch_id }) {
+  const holidaysSet = new Set((data.holidays || []).map(h => h.date));
+  const allowedDayNames = data.business_days
+    .filter(d => Number(d.branch_id) === Number(branch_id) && Number(d.active) === 1)
+    .map(d => d.day_name);
+
+  const validDayNames = allowedDayNames.length ? allowedDayNames : EN_DAYS;
+  const samePhoneBookings = data.appointments.filter(a => a.status === 'booked' && String(a.phone || '') === String(phone || ''));
+
+  for (const b of samePhoneBookings) {
+    if (!b.booking_date) continue;
+    const earliest = addWorkingDays(b.booking_date, 2, validDayNames, holidaysSet);
+    if (booking_date < earliest) {
+      return { blocked: true, earliest };
+    }
+  }
+  return { blocked: false };
+}
+
 function makeSlots(start, end, interval = 30) {
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
@@ -423,6 +442,25 @@ app.get('/api/captcha', (_req, res) => {
   res.json({ image: c.image, challenge: c.code.split('').join(' '), token: c.token, hint: 'ادخل الرموز في الصورة' });
 });
 
+app.post('/api/precheck-booking', async (req, res) => {
+  const { phone, booking_date, branch_id } = req.body || {};
+  if (!phone || !booking_date || !branch_id) return res.status(400).json({ success: false, message: 'Missing required fields' });
+  if (!isValidPhone(phone)) return res.status(400).json({ success: false, message: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
+
+  const data = await read();
+  const cooldown = checkBookingCooldown(data, { phone, booking_date, branch_id });
+  if (cooldown.blocked) {
+    return res.status(409).json({
+      success: false,
+      message: `لا يمكن الحجز الآن لنفس العميل. يمكنك الحجز بعد: ${cooldown.earliest}`,
+      code: 'BOOKING_COOLDOWN',
+      earliest_date: cooldown.earliest
+    });
+  }
+
+  return res.json({ success: true });
+});
+
 app.post('/api/send-otp', async (req, res) => {
   const { phone, full_name, transfer_number, captcha_answer, captcha_token } = req.body || {};
   if (!phone || !full_name || !transfer_number || !captcha_answer || !captcha_token) return res.status(400).json({ error: 'Missing fields' });
@@ -484,22 +522,14 @@ app.post('/api/book', async (req, res) => {
   const holidaysSet = new Set((data.holidays || []).map(h => h.date));
   if (holidaysSet.has(booking_date)) return res.status(400).json({ success: false, message: 'هذا اليوم عطلة ولا يمكن الحجز فيه' });
 
-  const allowedDayNames = data.business_days
-    .filter(d => Number(d.branch_id) === Number(branch_id) && Number(d.active) === 1)
-    .map(d => d.day_name);
-
-  const relatedBookings = data.appointments.filter(a => a.status === 'booked' && (String(a.phone || '') === String(phone) || String(a.full_name || '') === cleanName));
-  for (const b of relatedBookings) {
-    if (!b.booking_date) continue;
-    const earliest = addWorkingDays(b.booking_date, 2, allowedDayNames, holidaysSet);
-    if (booking_date < earliest) {
-      return res.status(409).json({
-        success: false,
-        message: `لا يمكن الحجز الآن لنفس العميل. يمكنك الحجز بعد: ${earliest}`,
-        code: 'BOOKING_COOLDOWN',
-        earliest_date: earliest
-      });
-    }
+  const cooldown = checkBookingCooldown(data, { phone, booking_date, branch_id });
+  if (cooldown.blocked) {
+    return res.status(409).json({
+      success: false,
+      message: `لا يمكن الحجز الآن لنفس العميل. يمكنك الحجز بعد: ${cooldown.earliest}`,
+      code: 'BOOKING_COOLDOWN',
+      earliest_date: cooldown.earliest
+    });
   }
 
   const sameSlotCount = data.appointments.filter(a => Number(a.branch_id) === Number(branch_id) && a.booking_date === booking_date && a.slot_time === slot_time && a.status === 'booked').length;

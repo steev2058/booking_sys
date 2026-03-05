@@ -279,6 +279,20 @@ async function verifyCaptchaAndSendOtp(){
   if(!isValidName(fullNameVal)){showToast('الاسم يجب أن يحتوي محارف فقط بدون أرقام',false);msg.style.color='#b00020';msg.textContent='الاسم يجب أن يحتوي محارف فقط بدون أرقام';return;}
   const btn=verifyActionBtn||window.verifyBtn;
   if(btn) btn.disabled=true;
+
+  const pre=await j('/api/precheck-booking',{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({phone:phoneVal,booking_date:selectedDate,branch_id:branch.value})
+  });
+  if(!pre.success){
+    msg.style.color='#b00020';
+    msg.textContent=pre.message||pre.error||'خطأ غير متوقع';
+    showToast(pre.message||pre.error||'خطأ غير متوقع',false);
+    if(btn) btn.disabled=false;
+    return;
+  }
+
   const r=await j('/api/send-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:phoneVal,full_name:fullNameVal,transfer_number:transferVal,captcha_answer:captchaA.value,captcha_token:captchaToken})}, true);
   msg.style.color=r.ok?'#1b5e20':'#b00020';
   msg.textContent=r.message||r.error||'خطأ غير متوقع';
