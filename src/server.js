@@ -18,7 +18,7 @@ const OTP_WINDOW_MINUTES = Number(process.env.OTP_WINDOW_MINUTES || 10);
 const OTP_MAX_PER_WINDOW = Number(process.env.OTP_MAX_PER_WINDOW || 5);
 const OTP_MAX_VERIFY_ATTEMPTS = Number(process.env.OTP_MAX_VERIFY_ATTEMPTS || 5);
 const OTP_LOCK_MINUTES = Number(process.env.OTP_LOCK_MINUTES || 30);
-const EMPLOYEE_PREFIX = process.env.EMPLOYEE_PREFIX || '50';
+const EMPLOYEE_PREFIX = (process.env.EMPLOYEE_PREFIX || 'BBSY0').toUpperCase();
 
 const ROLE_ADMIN_LIKE = ['admin'];
 const ROLE_VIEW_APPOINTMENTS = ['admin', 'manager', 'employee', 'branch_employee'];
@@ -154,142 +154,16 @@ function randomPassword(len = 10) {
 }
 
 function generateEmployeeNo(data) {
+  const prefix = EMPLOYEE_PREFIX.toUpperCase();
   const list = (data.dashboard_users || [])
-    .map(u => String(u.employee_no || ''))
-    .filter(v => v.startsWith(EMPLOYEE_PREFIX) && /^\d+$/.test(v))
-    .map(v => Number(v));
-  const max = list.length ? Math.max(...list) : Number(`${EMPLOYEE_PREFIX}000`);
-  return String(max + 1);
+    .map(u => String(u.employee_no || '').trim().toUpperCase())
+    .filter(v => v.startsWith(prefix))
+    .map(v => Number(v.slice(prefix.length)))
+    .filter(v => Number.isFinite(v));
+  const max = list.length ? Math.max(...list) : 0;
+  return `${prefix}${String(max + 1).padStart(3, '0')}`;
 }
 
-function getSec(data, phone) {
-  let row = data.otp_security.find(x => x.phone === phone);
-  if (!row) {
-    row = { phone, send_count: 0, window_start: nowISO(), verify_fail_count: 0, locked_until: null };
-    data.otp_security.push(row);
-  }
-  return row;
-}
-
-function ensureNotLocked(data, phone) {
-  const sec = getSec(data, phone);
-  if (sec.locked_until && new Date(sec.locked_until).getTime() > Date.now()) {
-    return { ok: false, message: `Too many attempts. Try again after ${sec.locked_until}` };
-  }
-  return { ok: true };
-}
-
-function canSendOtp(data, phone) {
-  const sec = getSec(data, phone);
-  const now = Date.now();
-  const windowMs = OTP_WINDOW_MINUTES * 60 * 1000;
-  const ws = sec.window_start ? new Date(sec.window_start).getTime() : 0;
-  if (!ws || now - ws > windowMs) {
-    sec.send_count = 0;
-    sec.window_start = nowISO();
-  }
-  if (sec.send_count >= OTP_MAX_PER_WINDOW) return false;
-  sec.send_count += 1;
-  return true;
-}
-
-function trackVerifyFail(data, phone) {
-  const sec = getSec(data, phone);
-  sec.verify_fail_count = Number(sec.verify_fail_count || 0) + 1;
-  if (sec.verify_fail_count >= OTP_MAX_VERIFY_ATTEMPTS) {
-    sec.verify_fail_count = 0;
-    sec.locked_until = new Date(Date.now() + OTP_LOCK_MINUTES * 60 * 1000).toISOString();
-    return { locked: true, lockedUntil: sec.locked_until };
-  }
-  return { locked: false };
-}
-
-function resetVerifyFail(data, phone) {
-  const sec = getSec(data, phone);
-  sec.verify_fail_count = 0;
-  sec.locked_until = null;
-}
-
-function ensureDefaultBusinessDays(data, branchId) {
-  const defaults = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
-  for (const day of defaults) {
-    const exists = data.business_days.find(d => Number(d.branch_id) === Number(branchId) && d.day_name === day);
-    if (!exists) {
-      data.business_days.push({
-        id: nextId(data, 'business_days'),
-        branch_id: Number(branchId),
-        day_name: day,
-        start_time: '10:00',
-        end_time: '14:00',
-        interval_minutes: 30,
-        active: 1
-      });
-    } else {
-      exists.start_time = '10:00';
-      exists.end_time = '14:00';
-      exists.interval_minutes = 30;
-      exists.active = 1;
-    }
-  }
-  // Friday is non-working by default
-  for (const row of data.business_days.filter(d => Number(d.branch_id) === Number(branchId) && d.day_name === 'Friday')) {
-    row.active = 0;
-  }
-}
-
-function calcSlotEnd(slotStart, minutes = 30) {
-  const [h, m] = String(slotStart).split(':').map(Number);
-  const total = h * 60 + m + minutes;
-  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
-}
-
-function hhmmToMin(v = '00:00') {
-  const [h, m] = String(v).split(':').map(Number);
-  return (h * 60) + m;
-}
-
-async function generateDailyReportsIfNeeded(dateYmd = ymd(new Date())) {
-  const data = await read();
-  let changed = false;
-  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-  const holidaysSet = new Set((data.holidays || []).map(h => h.date));
-  if (holidaysSet.has(dateYmd)) return false;
-
-  for (const branch of (data.branches || []).filter(b => Number(b.active) === 1)) {
-    const dayName = EN_DAYS[fromYmd(dateYmd).getDay()];
-    const dayCfg = (data.business_days || []).find(d => Number(d.branch_id) === Number(branch.id) && d.day_name === dayName && Number(d.active) === 1);
-    if (!dayCfg) continue;
-    if (nowMin < hhmmToMin(dayCfg.start_time || '09:00')) continue;
-
-    const exists = (data.daily_reports || []).find(r => r.report_date === dateYmd && Number(r.branch_id) === Number(branch.id));
-    if (exists) continue;
-
-    const rows = (data.appointments || [])
-      .filter(a => a.status === 'booked' && a.booking_date === dateYmd && Number(a.branch_id) === Number(branch.id))
-      .map(a => ({
-        id: a.id,
-        full_name: a.full_name || '',
-        phone: a.phone,
-        transfer_number: a.transfer_number,
-        slot_from: a.slot_time,
-        slot_to: a.slot_to || ''
-      }));
-
-    data.daily_reports = data.daily_reports || [];
-    data.daily_reports.push({
-      id: nextId(data, 'daily_reports'),
-      report_date: dateYmd,
-      branch_id: Number(branch.id),
-      total_booked: rows.length,
-      payload: rows,
-      created_at: nowISO()
-    });
-    changed = true;
-  }
-
-  if (changed) await write(data);
-  return changed;
-}
 
 async function sendSmsRaw(phone, msg) {
   const qs = new URLSearchParams({ User: SMS_USER, Pass: SMS_PASS, From: SMS_FROM, Gsm: phone, Msg: msg, Lang: '0' });
@@ -693,9 +567,9 @@ app.post('/api/admin/users', auth(['admin']), async (req, res) => {
   if (!['admin', 'manager', 'employee'].includes(cleanRole)) return res.status(400).json({ error: 'role must be admin, manager, or employee' });
   if ((cleanRole === 'employee' || (cleanRole === 'manager' && MANAGER_SCOPED_TO_BRANCH)) && !Number(branch_id)) return res.status(400).json({ error: 'branch_id required for this role' });
   if (data.dashboard_users.some(u => u.username === cleanUsername)) return res.status(409).json({ error: 'username already exists' });
-  if (cleanEmpNo && !/^50\d+$/.test(cleanEmpNo)) return res.status(400).json({ error: 'employee_no must start with 50 and contain digits only' });
+  if (cleanEmpNo && !new RegExp(`^${EMPLOYEE_PREFIX}\\d+$`, 'i').test(cleanEmpNo)) return res.status(400).json({ error: `employee_no must start with ${EMPLOYEE_PREFIX}` });
 
-  const employeeNo = cleanEmpNo || generateEmployeeNo(data);
+  const employeeNo = (cleanEmpNo ? cleanEmpNo.toUpperCase() : generateEmployeeNo(data));
   if (data.dashboard_users.some(u => String(u.employee_no || '') === employeeNo)) return res.status(409).json({ error: 'employee_no already exists' });
 
   const passwordPlain = randomPassword(10);
