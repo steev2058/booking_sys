@@ -254,24 +254,11 @@ function hhmmToMin(v = '00:00') {
   return (h * 60) + m;
 }
 
-async function generateDailyReportsIfNeeded(dateYmd = ymd(new Date())) {
-  const data = await read();
-  let changed = false;
-  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-  const holidaysSet = new Set((data.holidays || []).map(h => h.date));
-  if (holidaysSet.has(dateYmd)) return false;
-
-  for (const branch of (data.branches || []).filter(b => Number(b.active) === 1)) {
-    const dayName = EN_DAYS[fromYmd(dateYmd).getDay()];
-    const dayCfg = (data.business_days || []).find(d => Number(d.branch_id) === Number(branch.id) && d.day_name === dayName && Number(d.active) === 1);
-    if (!dayCfg) continue;
-    if (nowMin < hhmmToMin(dayCfg.start_time || '09:00')) continue;
-
-    const exists = (data.daily_reports || []).find(r => r.report_date === dateYmd && Number(r.branch_id) === Number(branch.id));
-    if (exists) continue;
-
+function buildLiveReportsForDate(data, dateYmd, scopedBranchId = null) {
+  const branches = (data.branches || []).filter(b => Number(b.active) === 1 && (!scopedBranchId || Number(b.id) === Number(scopedBranchId)));
+  return branches.map(branch => {
     const rows = (data.appointments || [])
-      .filter(a => a.status === 'booked' && a.booking_date === dateYmd && Number(a.branch_id) === Number(branch.id))
+      .filter(a => a.status === 'booked' && Number(a.branch_id) === Number(branch.id) && (a.booking_date === dateYmd || (!a.booking_date && a.created_at && ymd(a.created_at) === dateYmd)))
       .map(a => ({
         id: a.id,
         full_name: a.full_name || '',
@@ -281,15 +268,47 @@ async function generateDailyReportsIfNeeded(dateYmd = ymd(new Date())) {
         slot_to: a.slot_to || ''
       }));
 
-    data.daily_reports = data.daily_reports || [];
-    data.daily_reports.push({
-      id: nextId(data, 'daily_reports'),
-      report_date: dateYmd,
+    return {
       branch_id: Number(branch.id),
+      branch_name: branch.name || '',
+      report_date: dateYmd,
       total_booked: rows.length,
-      payload: rows,
-      created_at: nowISO()
-    });
+      payload: rows
+    };
+  });
+}
+
+async function generateDailyReportsIfNeeded(dateYmd = ymd(new Date())) {
+  const data = await read();
+  let changed = false;
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const holidaysSet = new Set((data.holidays || []).map(h => h.date));
+  if (holidaysSet.has(dateYmd)) return false;
+
+  const dayName = EN_DAYS[fromYmd(dateYmd).getDay()];
+  const liveRows = buildLiveReportsForDate(data, dateYmd);
+
+  for (const r of liveRows) {
+    const dayCfg = (data.business_days || []).find(d => Number(d.branch_id) === Number(r.branch_id) && d.day_name === dayName && Number(d.active) === 1);
+    if (!dayCfg) continue;
+    if (nowMin < hhmmToMin(dayCfg.start_time || '09:00')) continue;
+
+    data.daily_reports = data.daily_reports || [];
+    const exists = data.daily_reports.find(x => x.report_date === dateYmd && Number(x.branch_id) === Number(r.branch_id));
+    if (exists) {
+      exists.total_booked = r.total_booked;
+      exists.payload = r.payload;
+      exists.created_at = nowISO();
+    } else {
+      data.daily_reports.push({
+        id: nextId(data, 'daily_reports'),
+        report_date: dateYmd,
+        branch_id: Number(r.branch_id),
+        total_booked: r.total_booked,
+        payload: r.payload,
+        created_at: nowISO()
+      });
+    }
     changed = true;
   }
 
@@ -652,30 +671,38 @@ app.delete('/api/admin/business-days/:id', auth(ROLE_DAY_MANAGE), async (req, re
 
 app.get('/api/admin/reports/daily', auth(['admin', 'manager']), async (req, res) => {
   const date = String(req.query.date || ymd(new Date()));
-  await generateDailyReportsIfNeeded(date);
   const data = await read();
-  let rows = (data.daily_reports || []).filter(r => r.report_date === date);
-  if (req.user.role === 'manager' && MANAGER_SCOPED_TO_BRANCH) rows = rows.filter(r => Number(r.branch_id) === Number(req.user.branch_id));
-
-  const reports = rows.map(r => {
-    const b = data.branches.find(x => Number(x.id) === Number(r.branch_id)) || {};
-    return {
-      id: r.id,
-      report_date: r.report_date,
-      branch_id: r.branch_id,
-      branch_name: b.name || '',
-      total_booked: r.total_booked || 0,
-      payload: r.payload || []
-    };
-  }).sort((a, b) => Number(a.branch_id) - Number(b.branch_id));
-
+  const scopedBranchId = (req.user.role === 'manager' && MANAGER_SCOPED_TO_BRANCH) ? req.user.branch_id : null;
+  const reports = buildLiveReportsForDate(data, date, scopedBranchId).sort((a, b) => Number(a.branch_id) - Number(b.branch_id));
   res.json({ reports });
 });
 
 app.post('/api/admin/reports/daily/generate', auth(['admin']), async (req, res) => {
   const date = String((req.body || {}).date || ymd(new Date()));
-  const changed = await generateDailyReportsIfNeeded(date);
-  res.json({ ok: true, generated: changed, date });
+  const data = await read();
+  const rows = buildLiveReportsForDate(data, date);
+  data.daily_reports = data.daily_reports || [];
+
+  for (const r of rows) {
+    const exists = data.daily_reports.find(x => x.report_date === date && Number(x.branch_id) === Number(r.branch_id));
+    if (exists) {
+      exists.total_booked = r.total_booked;
+      exists.payload = r.payload;
+      exists.created_at = nowISO();
+    } else {
+      data.daily_reports.push({
+        id: nextId(data, 'daily_reports'),
+        report_date: date,
+        branch_id: Number(r.branch_id),
+        total_booked: r.total_booked,
+        payload: r.payload,
+        created_at: nowISO()
+      });
+    }
+  }
+
+  await write(data);
+  res.json({ ok: true, generated: true, date, count: rows.length });
 });
 
 app.get('/api/admin/users', auth(['admin']), async (_req, res) => {
