@@ -164,6 +164,18 @@
   </div>
 </div>
 
+
+<div id="passwordModal" class="modal-backdrop">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-title">كلمة السر الجديدة</div>
+    <div class="modal-text" id="passwordModalText" style="word-break:break-all"></div>
+    <div class="modal-actions">
+      <button id="passwordModalClose" class="ghost" type="button">إغلاق</button>
+      <button id="passwordModalCopy" type="button">نسخ</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let token=''; let role=''; let myBranchId=null; let branchesCache=[]; let apptsCache=[]; let usersCache=[];
 const SESSION_KEY='booking_admin_session_v1';
@@ -175,6 +187,18 @@ function roleLabel(r){return r==='admin'?'Admin':(r==='manager'?'Manager':'Emplo
 const h=()=>({Authorization:'Bearer '+token,'content-type':'application/json'});
 function showToast(text, ok=true){const t=document.getElementById('toast');t.textContent=text;t.style.background=ok?'#1b5e20':'#b00020';t.style.display='block';clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.style.display='none',2500)}
 function confirmAction(text){return new Promise((resolve)=>{const m=document.getElementById('confirmModal');document.getElementById('confirmText').textContent=text;m.style.display='flex';document.getElementById('confirmYes').onclick=()=>{m.style.display='none';resolve(true)};document.getElementById('confirmNo').onclick=()=>{m.style.display='none';resolve(false)};});}
+
+function showPasswordModal(password){
+  const m=document.getElementById('passwordModal');
+  const txt=document.getElementById('passwordModalText');
+  txt.textContent=password||'';
+  m.style.display='flex';
+  document.getElementById('passwordModalClose').onclick=()=>{m.style.display='none';};
+  document.getElementById('passwordModalCopy').onclick=async()=>{
+    try{await navigator.clipboard.writeText(password||'');showToast('تم نسخ كلمة السر');}
+    catch{showToast('تعذر النسخ التلقائي، انسخها يدويًا',false)}
+  };
+}
 let addMode='';
 function closeAddModal(){addModal.style.display='none';addMode='';}
 function openAddModal(mode){
@@ -234,7 +258,7 @@ async function addUser(){if((window.m_u_role?.value)==='employee'&&!window.m_u_b
 
 async function updUser(id){if(!await confirmAction('تأكيد تعديل بيانات المستخدم؟'))return;const r=await j('/api/admin/users/'+id,{method:'PUT',headers:h(),body:JSON.stringify({role:document.getElementById('ur_'+id).value,branch_id:Number(document.getElementById('ub_'+id).value)||null,active:Number(document.getElementById('ua_'+id).value)})});if(!r.ok){showToast(r.error||'فشل التعديل',false);return;}await loadUsers();showToast('تم تعديل المستخدم');}
 
-async function resetUserPass(id){if(!await confirmAction('توليد كلمة سر جديدة لهذا المستخدم؟'))return;const r=await j('/api/admin/users/'+id,{method:'PUT',headers:h(),body:JSON.stringify({reset_password:true})});if(!r.ok){showToast(r.error||'فشل العملية',false);return;}showToast(`كلمة السر الجديدة: ${r.new_password}`);}
+async function resetUserPass(id){if(!await confirmAction('توليد كلمة سر جديدة لهذا المستخدم؟'))return;const r=await j('/api/admin/users/'+id,{method:'PUT',headers:h(),body:JSON.stringify({reset_password:true})});if(!r.ok){showToast(r.error||'فشل العملية',false);return;}showPasswordModal(r.new_password);}
 
 async function delUser(id){if(!await confirmAction('تأكيد حذف المستخدم؟'))return;const r=await j('/api/admin/users/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});if(!r.ok){showToast(r.error||'فشل الحذف',false);return;}await loadUsers();showToast('تم حذف المستخدم');}
 
