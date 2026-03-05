@@ -495,7 +495,9 @@ app.post('/api/book', async (req, res) => {
     if (booking_date < earliest) {
       return res.status(409).json({
         success: false,
-        message: `لا يمكن حجز موعد جديد قبل يومي عمل. أقرب تاريخ متاح: ${earliest}`
+        message: `لا يمكن الحجز الآن لنفس العميل. يمكنك الحجز بعد: ${earliest}`,
+        code: 'BOOKING_COOLDOWN',
+        earliest_date: earliest
       });
     }
   }
