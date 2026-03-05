@@ -91,8 +91,8 @@
       <div id="p1" class="section active">
         <div class="grid">
           <div><label>شركة الحوالات</label><select id="company"></select></div>
-          <div><label>رقم الحوالة</label><input id="transfer"></div>
-          <div><label>رقم الهاتف</label><input id="phone" value="09" maxlength="10" inputmode="numeric" pattern="09[0-9]{8}"></div>
+          <div><label>رقم الحوالة</label><input id="transfer" style="direction:ltr;text-align:left"></div>
+          <div><label>رقم الهاتف</label><input id="phone" value="09" maxlength="10" inputmode="numeric" pattern="09[0-9]{8}" style="direction:ltr;text-align:left"></div>
           <div><label>الاسم الثلاثي</label><input id="full_name" placeholder="الاسم الثلاثي"></div>
           <div><label>الفرع</label><select id="branch"></select></div>
         </div>
@@ -115,7 +115,7 @@
           <img id="captchaImg" class="captcha-img" alt="captcha" onerror="this.style.display='none';captchaFallback.textContent='تعذر تحميل الصورة - اضغط تحديث';">
           <div id="captchaFallback" class="captcha-fallback"></div>
           <button class="alt" onclick="refreshCaptcha()">تحديث</button>
-          <input id="captchaA" placeholder="ادخل الرمز في الصورة" style="max-width:240px">
+          <input id="captchaA" placeholder="ادخل الرمز في الصورة" style="max-width:240px;direction:ltr;text-align:left" inputmode="numeric">
         </div>
 
         <div class="actions">
@@ -133,7 +133,7 @@
     <div class="modal-box" style="max-width:380px">
       <div class="modal-title">إدخال رمز OTP</div>
       <div class="modal-text">أدخل رمز 4 خانات المرسل إلى هاتفك</div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px">
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;direction:ltr">
         <input id="o1" maxlength="1" inputmode="numeric" style="width:54px;text-align:center;font-size:24px">
         <input id="o2" maxlength="1" inputmode="numeric" style="width:54px;text-align:center;font-size:24px">
         <input id="o3" maxlength="1" inputmode="numeric" style="width:54px;text-align:center;font-size:24px">

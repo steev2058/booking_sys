@@ -436,7 +436,7 @@ app.post('/api/book', async (req, res) => {
     if (t.locked) return res.status(429).json({ success: false, message: 'تم قفل المحاولات مؤقتاً بسبب كثرة الإدخال الخاطئ' });
     return res.status(400).json({ success: false, message: 'رمز التحقق غير صحيح' });
   }
-  if (new Date(otp.expires_at).getTime() < Date.now()) return res.status(400).json({ success: false, message: 'انتهت صلاحية رمز التحقق' });
+  // OTP expiry check disabled per business request
 
   const dayName = EN_DAYS[fromYmd(booking_date).getDay()];
   const dayCfg = data.business_days.find(d => Number(d.branch_id) === Number(branch_id) && d.day_name === dayName && Number(d.active) === 1);
