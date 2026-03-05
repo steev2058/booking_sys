@@ -470,7 +470,10 @@ app.post('/api/precheck-booking', async (req, res) => {
     if (!phone || !booking_date || !branch_id) return res.status(400).json({ success: false, message: 'Missing required fields' });
     if (!isValidPhone(phone)) return res.status(400).json({ success: false, message: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
 
-    const data = getCooldownData ? await getCooldownData() : await read();
+    const data = await Promise.race([
+      (getCooldownData ? getCooldownData() : read()),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('DB_TIMEOUT_PRECHECK')), Number(process.env.PRECHECK_TIMEOUT_MS || 8000)))
+    ]);
     const cooldown = checkBookingCooldown(data, { phone, booking_date, branch_id });
     if (cooldown.blocked) {
       return res.status(409).json({
@@ -484,6 +487,9 @@ app.post('/api/precheck-booking', async (req, res) => {
     return res.json({ success: true });
   } catch (e) {
     console.error('[ERR] /api/precheck-booking:', e && (e.stack || e.message || e));
+    if (String(e && e.message || '').includes('DB_TIMEOUT_PRECHECK')) {
+      return res.status(504).json({ success: false, message: 'انتهت مهلة الاتصال بقاعدة البيانات أثناء التحقق. تحقق من MySQL ثم أعد المحاولة.' });
+    }
     return res.status(500).json({ success: false, message: 'خطأ داخلي أثناء التحقق المسبق' });
   }
 });
