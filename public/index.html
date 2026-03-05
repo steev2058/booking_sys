@@ -119,7 +119,7 @@
         </div>
 
         <div class="actions">
-          <button onclick="verifyCaptchaAndSendOtp()">تأكيد والتحقق من الكابتشا</button>
+          <button id="verifyBtn" onclick="verifyCaptchaAndSendOtp()">تأكيد والتحقق من الكابتشا</button>
           <button class="alt" onclick="nextStep(2)">رجوع</button>
         </div>
       </div>
@@ -159,7 +159,7 @@
   </div>
 
 <script>
-let captchaToken='',selectedSlot='',selectedDate='',daysConfig=[],step=1,bookingEnabled=true;
+let captchaToken='',selectedSlot='',selectedDate='',daysConfig=[],step=1,bookingEnabled=true,otpRequestLocked=false;
 const setStep=()=>{['p1','p2','p3'].forEach((x,i)=>document.getElementById(x).classList.toggle('active',i+1===step));['s1','s2','s3'].forEach((x,i)=>document.getElementById(x).classList.toggle('active',i+1===step));}
 function goStep(n){if(n===2||n===3){nextStep(n);return;}step=n;setStep();}
 function showToast(text, ok=true){const t=document.getElementById('toast');t.textContent=text;t.style.background=ok?'#1b5e20':'#b00020';t.style.display='block';clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.style.display='none',2500)}
@@ -175,6 +175,7 @@ function setBookingEnabled(enabled){
     if(el.id==='msg') return;
     el.disabled=!enabled;
   });
+  if(window.verifyBtn) verifyBtn.disabled=!enabled || otpRequestLocked;
   if(!enabled){
     msg.style.color='#b00020';
     msg.textContent='تم إيقاف الحجز حالياً لعدم توفر شركات حوالات فعالة.';
@@ -186,6 +187,8 @@ function setBookingEnabled(enabled){
 function nextStep(n){if(!bookingEnabled){showToast('الحجز متوقف حالياً لعدم توفر شركات حوالات',false);return;}const transferVal=String(document.getElementById('transfer').value||'').trim();const phoneVal=String(document.getElementById('phone').value||'').trim();const fullNameVal=String(document.getElementById('full_name').value||'').trim();if(n===2&&(!transferVal||!phoneVal||!fullNameVal)){msg.style.color='#b00020';msg.textContent='يرجى تعبئة رقم الحوالة والهاتف والاسم الثلاثي';showToast('يرجى تعبئة رقم الحوالة والهاتف والاسم الثلاثي',false);return;}if(n===2&&!/^09\d{8}$/.test(phoneVal)){msg.style.color='#b00020';msg.textContent='رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام';showToast('رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام',false);return;}if(n===2&&!isValidName(fullNameVal)){msg.style.color='#b00020';msg.textContent='الاسم يجب أن يحتوي محارف فقط بدون أرقام';showToast('الاسم يجب أن يحتوي محارف فقط بدون أرقام',false);return;}if(n===3&&!selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';showToast('الرجاء اختيار وقت متاح',false);return;}clearMsg();step=n;setStep();}
 async function j(url, options){const r=await fetch(url, options);return await r.json();}
 async function refreshCaptcha(){
+  otpRequestLocked=false;
+  if(window.verifyBtn) verifyBtn.disabled=false;
   const cap=await j('/api/captcha');
   captchaToken=cap.token;
   if(cap.image){
@@ -226,23 +229,22 @@ otpCancelEl.onclick=()=>{otpModalEl.style.display='none';};
 
 async function verifyCaptchaAndSendOtp(){
   if(!bookingEnabled){showToast('الحجز متوقف حالياً لعدم توفر شركات حوالات',false);return;}
+  if(otpRequestLocked){showToast('تم إرسال الرمز بالفعل، أدخله أو حدّث الكابتشا لإعادة الإرسال',false);return;}
   const phoneVal=String(document.getElementById('phone').value||'').trim();
   const transferVal=String(document.getElementById('transfer').value||'').trim();
   const fullNameVal=String(document.getElementById('full_name').value||'').trim();
   if(!/^09\d{8}$/.test(phoneVal)){showToast('رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام',false);msg.style.color='#b00020';msg.textContent='رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام';return;}
   if(!isValidName(fullNameVal)){showToast('الاسم يجب أن يحتوي محارف فقط بدون أرقام',false);msg.style.color='#b00020';msg.textContent='الاسم يجب أن يحتوي محارف فقط بدون أرقام';return;}
-  const btn=document.querySelector('button[onclick="verifyCaptchaAndSendOtp()"]');
+  const btn=window.verifyBtn;
   if(btn) btn.disabled=true;
-  try {
-    const r=await j('/api/send-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:phoneVal,full_name:fullNameVal,transfer_number:transferVal,captcha_answer:captchaA.value,captcha_token:captchaToken})});
-    msg.style.color=r.ok?'#1b5e20':'#b00020';
-    msg.textContent=r.message||r.error||'خطأ غير متوقع';
-    showToast(r.message||r.error||'خطأ غير متوقع',!!r.ok);
-    if(!r.ok){await refreshCaptcha();return;}
-    openOtpModal();
-  } finally {
-    if(btn) btn.disabled=false;
-  }
+  const r=await j('/api/send-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:phoneVal,full_name:fullNameVal,transfer_number:transferVal,captcha_answer:captchaA.value,captcha_token:captchaToken})});
+  msg.style.color=r.ok?'#1b5e20':'#b00020';
+  msg.textContent=r.message||r.error||'خطأ غير متوقع';
+  showToast(r.message||r.error||'خطأ غير متوقع',!!r.ok);
+  if(!r.ok){await refreshCaptcha();return;}
+  otpRequestLocked=true;
+  if(btn) btn.disabled=true;
+  openOtpModal();
 }
 
 otpConfirmEl.onclick=async()=>{
@@ -258,7 +260,7 @@ otpConfirmEl.onclick=async()=>{
     msg.style.color=r.success?'#1b5e20':'#b00020';
     msg.textContent=r.message||r.error||'خطأ غير متوقع';
     showToast(r.message||r.error||'خطأ غير متوقع',!!r.success);
-    if(r.success){otpModalEl.style.display='none';await loadSlots();step=1;setStep();await refreshCaptcha();}
+    if(r.success){otpModalEl.style.display='none';msg.style.color='#1b5e20';msg.textContent='تم الحجز بنجاح';showToast('تم الحجز بنجاح',true);await loadSlots();step=1;setStep();await refreshCaptcha();}
   } finally {
     otpConfirmEl.disabled=false;
   }
