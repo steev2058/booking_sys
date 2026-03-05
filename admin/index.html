@@ -39,6 +39,11 @@
     .role-admin{background:#fdecea;color:#b71c1c}
     .role-manager{background:#e8f5e9;color:#1b5e20}
     .role-employee{background:#e3f2fd;color:#0d47a1}
+
+    .role-select{font-weight:800;border-radius:12px}
+    .role-select.role-admin{background:#fdecea;color:#b71c1c;border-color:#f2c6c6}
+    .role-select.role-manager{background:#e8f5e9;color:#1b5e20;border-color:#bfe2c3}
+    .role-select.role-employee{background:#e3f2fd;color:#0d47a1;border-color:#bdd8ef}
     button.ghost{background:#eceff1;color:#455a64}
     button.danger{background:#b71c1c}
     .table-wrap{overflow:auto;-webkit-overflow-scrolling:touch}
@@ -250,7 +255,6 @@ async function addBusinessDay(){const branchId=Number(role==='branch_employee'?m
 async function updDay(id){if(!await confirmAction('تأكيد تعديل يوم الدوام؟'))return;await fetch('/api/admin/business-days/'+id,{method:'PUT',headers:h(),body:JSON.stringify({branch_id:Number(role==='branch_employee'?myBranchId:document.getElementById('db_'+id).value),day_name:document.getElementById('dd_'+id).value,start_time:document.getElementById('ds_'+id).value,end_time:document.getElementById('de_'+id).value,interval_minutes:Number(document.getElementById('di_'+id).value||60),active:Number(document.getElementById('da_'+id).value)})});await loadDays();showToast('تم تعديل يوم الدوام');}
 async function delDay(id){if(!await confirmAction('تأكيد حذف يوم الدوام؟'))return;await fetch('/api/admin/business-days/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});await loadDays();showToast('تم حذف يوم الدوام');}
 
-function roleBadge(r){const rr=(r==='branch_employee'?'employee':r);const cls=rr==='admin'?'role-admin':(rr==='manager'?'role-manager':'role-employee');return `<span class='badge ${cls}'>${rr}</span>`}
 function renderUsers(){const q=String(usersSearch.value||'').trim().toLowerCase();const rows=(usersCache||[]).filter(x=>!q||`${x.username} ${x.employee_no||''} ${x.role}`.toLowerCase().includes(q));usersTb.innerHTML=rows.map(x=>`<tr><td>${x.id}</td><td>${x.username}</td><td>${x.employee_no||''}</td><td>${roleBadge(x.role)} <select id='ur_${x.id}'><option value='manager' ${x.role==='manager'?'selected':''}>manager</option><option value='employee' ${x.role==='employee'||x.role==='branch_employee'?'selected':''}>employee</option><option value='admin' ${x.role==='admin'?'selected':''}>admin</option></select></td><td>${branchSelectHtml(`ub_${x.id}`,x.branch_id)}</td><td><select id='ua_${x.id}'><option value='1' ${x.active?'selected':''}>1</option><option value='0' ${!x.active?'selected':''}>0</option></select></td><td><button class='ghost' onclick='updUser(${x.id})'>تعديل</button> <button class='ghost' onclick='resetUserPass(${x.id})'>توليد كلمة سر</button> <button class='danger' onclick='delUser(${x.id})'>حذف</button></td></tr>`).join('');}
 async function loadUsers(){if(!branchesCache.length) await loadBranches();const r=await j('/api/admin/users',{headers:{Authorization:'Bearer '+token}});usersCache=r.users||[];renderUsers();}
 
