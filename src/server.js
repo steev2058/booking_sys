@@ -442,6 +442,13 @@ app.get('/api/captcha', (_req, res) => {
   res.json({ image: c.image, challenge: c.code.split('').join(' '), token: c.token, hint: 'ادخل الرموز في الصورة' });
 });
 
+app.get('/api/precheck-booking', (_req, res) => {
+  return res.status(405).json({
+    success: false,
+    message: 'Use POST /api/precheck-booking with JSON body: { phone, booking_date, branch_id }'
+  });
+});
+
 app.post('/api/precheck-booking', async (req, res) => {
   const { phone, booking_date, branch_id } = req.body || {};
   if (!phone || !booking_date || !branch_id) return res.status(400).json({ success: false, message: 'Missing required fields' });
