@@ -576,6 +576,15 @@ app.get('/api/admin/branches', auth(ROLE_ADMIN_LIKE), async (_req, res) => {
   res.json({ branches: [...data.branches].sort((a, b) => Number(b.id) - Number(a.id)) });
 });
 
+app.get('/api/admin/branches-lite', auth(['admin', 'manager', 'branch_employee', 'employee']), async (req, res) => {
+  const data = await read();
+  let rows = [...data.branches].filter(b => Number(b.active) === 1);
+  if ((req.user.role === 'manager' || req.user.role === 'branch_employee' || req.user.role === 'employee') && req.user.branch_id) {
+    rows = rows.filter(b => Number(b.id) === Number(req.user.branch_id));
+  }
+  res.json({ branches: rows.sort((a, b) => Number(a.id) - Number(b.id)) });
+});
+
 app.post('/api/admin/branches', auth(ROLE_ADMIN_LIKE), async (req, res) => {
   const { code, name, location } = req.body || {};
   if (!code || !name || !location) return res.status(400).json({ error: 'Missing fields' });
