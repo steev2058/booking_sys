@@ -200,8 +200,8 @@ function setLoading(on){
   loadCount=Math.max(0, loadCount + (on?1:-1));
   if(window.globalLoader) globalLoader.style.display = loadCount>0 ? 'flex' : 'none';
 }
-async function j(url, options){
-  setLoading(true);
+async function j(url, options, useLoader=false){
+  if(useLoader) setLoading(true);
   try {
     const r=await fetch(url, options);
     let body={};
@@ -211,9 +211,8 @@ async function j(url, options){
   } catch {
     return { ok:false, success:false, error:'تعذر الاتصال بالخادم. يرجى المحاولة لاحقاً.' };
   } finally {
-    setLoading(false);
+    if(useLoader) setLoading(false);
   }
-  if(rb) rb.disabled=false;
 }
 async function refreshCaptcha(forceCloseOtp=false){
   const rb=document.getElementById('captchaRefreshBtn');
@@ -233,9 +232,9 @@ async function refreshCaptcha(forceCloseOtp=false){
   }
   if(rb) rb.disabled=false;
 }
-async function init(){phone.value='09';const b=await j('/api/branches');branch.innerHTML=b.branches.map(x=>`<option value="${x.id}">${x.name} - ${x.location}</option>`).join('');const c=await j('/api/companies');const companies=(c.companies||[]);company.innerHTML=companies.map(x=>`<option value="${x.id}">${x.name}${x.description?` - ${x.description}`:''}</option>`).join('');if(!companies.length){setBookingEnabled(false);return;}setBookingEnabled(true);await refreshCaptcha();await loadDays();}
-async function loadDays(){const d=await j('/api/business-days?branch_id='+branch.value);daysConfig=d.days||[];selectedDate='';days.innerHTML=daysConfig.map((x,i)=>`<div class="chip ${i===0?'active':''}" data-date="${x.date}">${x.day_name_ar} (${x.date})</div>`).join('');if(daysConfig[0])selectedDate=daysConfig[0].date;document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');selectedDate=el.dataset.date;loadSlots();});await loadSlots();}
-async function loadSlots(){selectedSlot='';if(!selectedDate){slots.innerHTML='';return;}const s=await j(`/api/slots?branch_id=${branch.value}&booking_date=${encodeURIComponent(selectedDate)}`);slots.innerHTML=(s.slots||[]).map(x=>`<div class="slot ${x.available?'':'na'}" data-time="${x.time}"><span>⏱</span><span>${x.time} - ${x.to_time}${x.available?'':` (ممتلئة)`}</span></div>`).join('');document.querySelectorAll('.slot:not(.na)').forEach(el=>el.onclick=()=>{document.querySelectorAll('.slot').forEach(a=>a.classList.remove('sel'));el.classList.add('sel');selectedSlot=el.dataset.time;});}
+async function init(){phone.value='09';const b=await j('/api/branches',{},true);branch.innerHTML=b.branches.map(x=>`<option value="${x.id}">${x.name} - ${x.location}</option>`).join('');const c=await j('/api/companies',{},true);const companies=(c.companies||[]);company.innerHTML=companies.map(x=>`<option value="${x.id}">${x.name}${x.description?` - ${x.description}`:''}</option>`).join('');if(!companies.length){setBookingEnabled(false);return;}setBookingEnabled(true);await refreshCaptcha();await loadDays();}
+async function loadDays(){const d=await j('/api/business-days?branch_id='+branch.value,{},true);daysConfig=d.days||[];selectedDate='';days.innerHTML=daysConfig.map((x,i)=>`<div class="chip ${i===0?'active':''}" data-date="${x.date}">${x.day_name_ar} (${x.date})</div>`).join('');if(daysConfig[0])selectedDate=daysConfig[0].date;document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');selectedDate=el.dataset.date;loadSlots();});await loadSlots();}
+async function loadSlots(){selectedSlot='';if(!selectedDate){slots.innerHTML='';return;}const s=await j(`/api/slots?branch_id=${branch.value}&booking_date=${encodeURIComponent(selectedDate)}`,{},true);slots.innerHTML=(s.slots||[]).map(x=>`<div class="slot ${x.available?'':'na'}" data-time="${x.time}"><span>⏱</span><span>${x.time} - ${x.to_time}${x.available?'':` (ممتلئة)`}</span></div>`).join('');document.querySelectorAll('.slot:not(.na)').forEach(el=>el.onclick=()=>{document.querySelectorAll('.slot').forEach(a=>a.classList.remove('sel'));el.classList.add('sel');selectedSlot=el.dataset.time;});}
 branch.onchange=loadDays;
 document.getElementById('transfer').addEventListener('input',clearMsg);
 document.getElementById('phone').addEventListener('input',e=>{e.target.value=sanitizePhone(e.target.value);clearMsg();});
@@ -271,7 +270,7 @@ async function verifyCaptchaAndSendOtp(){
   if(!isValidName(fullNameVal)){showToast('الاسم يجب أن يحتوي محارف فقط بدون أرقام',false);msg.style.color='#b00020';msg.textContent='الاسم يجب أن يحتوي محارف فقط بدون أرقام';return;}
   const btn=verifyActionBtn||window.verifyBtn;
   if(btn) btn.disabled=true;
-  const r=await j('/api/send-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:phoneVal,full_name:fullNameVal,transfer_number:transferVal,captcha_answer:captchaA.value,captcha_token:captchaToken})});
+  const r=await j('/api/send-otp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:phoneVal,full_name:fullNameVal,transfer_number:transferVal,captcha_answer:captchaA.value,captcha_token:captchaToken})}, true);
   msg.style.color=r.ok?'#1b5e20':'#b00020';
   msg.textContent=r.message||r.error||'خطأ غير متوقع';
   showToast(r.message||r.error||'خطأ غير متوقع',!!r.ok);
@@ -298,7 +297,6 @@ otpConfirmEl.onclick=async()=>{
   } finally {
     otpConfirmEl.disabled=false;
   }
-  if(rb) rb.disabled=false;
 };
 
 
