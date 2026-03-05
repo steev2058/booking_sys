@@ -466,7 +466,6 @@ app.post('/api/book', async (req, res) => {
     slot_time,
     slot_to: calcSlotEnd(slot_time, Number(dayCfg.interval_minutes || 30)),
     phone,
-    full_name: cleanName,
     status: 'booked',
     created_at: nowISO()
   });
@@ -677,7 +676,6 @@ app.get('/api/admin/users', auth(['admin']), async (_req, res) => {
     id: u.id,
     username: u.username,
     employee_no: u.employee_no || '',
-    full_name: u.full_name || '',
     role: normalizeRole(u.role),
     branch_id: u.branch_id || null,
     active: Number(u.active || 0)
@@ -687,12 +685,11 @@ app.get('/api/admin/users', auth(['admin']), async (_req, res) => {
 
 app.post('/api/admin/users', auth(['admin']), async (req, res) => {
   const data = await read();
-  const { username, full_name, employee_no, role, branch_id, active } = req.body || {};
+  const { username, employee_no, role, branch_id, active } = req.body || {};
   const cleanUsername = String(username || '').trim();
-  const cleanName = String(full_name || '').trim();
   const cleanEmpNo = String(employee_no || '').trim();
   const cleanRole = normalizeRole(role);
-  if (!cleanUsername || !cleanName) return res.status(400).json({ error: 'username/full_name required' });
+  if (!cleanUsername) return res.status(400).json({ error: 'username required' });
   if (!['manager', 'employee'].includes(cleanRole)) return res.status(400).json({ error: 'role must be manager or employee' });
   if ((cleanRole === 'employee' || (cleanRole === 'manager' && MANAGER_SCOPED_TO_BRANCH)) && !Number(branch_id)) return res.status(400).json({ error: 'branch_id required for this role' });
   if (data.dashboard_users.some(u => u.username === cleanUsername)) return res.status(409).json({ error: 'username already exists' });
@@ -707,7 +704,6 @@ app.post('/api/admin/users', auth(['admin']), async (req, res) => {
     id: nextId(data, 'dashboard_users'),
     username: cleanUsername,
     employee_no: employeeNo,
-    full_name: cleanName,
     password_hash: bcrypt.hashSync(passwordPlain, 10),
     role: cleanRole,
     branch_id: (cleanRole === 'employee' || (cleanRole === 'manager' && MANAGER_SCOPED_TO_BRANCH)) ? Number(branch_id || 0) || null : null,
@@ -722,9 +718,8 @@ app.put('/api/admin/users/:id', auth(['admin']), async (req, res) => {
   const data = await read();
   const row = data.dashboard_users.find(u => Number(u.id) === Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Not found' });
-  const { full_name, role, branch_id, active, reset_password } = req.body || {};
+  const { role, branch_id, active, reset_password } = req.body || {};
 
-  if (full_name !== undefined) row.full_name = String(full_name || '').trim();
   const nextRole = role !== undefined ? normalizeRole(role) : normalizeRole(row.role);
   if (role !== undefined) {
     if (!['admin', 'manager', 'employee', 'branch_employee'].includes(nextRole)) return res.status(400).json({ error: 'invalid role' });
