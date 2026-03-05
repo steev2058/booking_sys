@@ -238,10 +238,8 @@ p?.addEventListener('keydown',e=>{if(e.key==='Enter')login();});
     const s=JSON.parse(raw);
     if(!s?.token||!s?.role) return;
     token=s.token; role=s.role; myBranchId=s.myBranchId||null;
-    const probe=await j('/api/admin/appointments',{headers:{Authorization:'Bearer '+token}});
-    if(!probe || probe.error==='Unauthorized' || probe.error==='Invalid token') { clearSession(); return; }
     await applySessionUI(s.username||'مستخدم');
-  }catch{ clearSession(); }
+  }catch{ /* keep graceful */ }
 })();
 </script>
 </body>
