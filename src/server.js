@@ -137,7 +137,11 @@ function verifyCaptcha(answer, token) {
 }
 
 function isValidPhone(phone) {
-  return /^\d{10}$/.test(String(phone || '').trim());
+  return /^09\d{8}$/.test(String(phone || '').trim());
+}
+
+function isValidFullName(name) {
+  return /^[A-Za-z\u0600-\u06FF\s]{3,}$/.test(String(name || '').trim());
 }
 
 function normalizeRole(role) {
@@ -254,7 +258,8 @@ app.get('/api/captcha', (_req, res) => {
 app.post('/api/send-otp', async (req, res) => {
   const { phone, full_name, transfer_number, captcha_answer, captcha_token } = req.body || {};
   if (!phone || !full_name || !transfer_number || !captcha_answer || !captcha_token) return res.status(400).json({ error: 'Missing fields' });
-  if (!isValidPhone(phone)) return res.status(400).json({ error: 'Phone must be exactly 10 digits' });
+  if (!isValidPhone(phone)) return res.status(400).json({ error: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
+  if (!isValidFullName(full_name)) return res.status(400).json({ error: 'الاسم يجب أن يحتوي على محارف فقط بدون أرقام' });
 
   const data = await read();
   const locked = ensureNotLocked(data, phone);
@@ -287,7 +292,8 @@ app.post('/api/send-otp', async (req, res) => {
 app.post('/api/book', async (req, res) => {
   const { transfer_number, branch_id, company_id, booking_date, slot_time, phone, full_name, otp_code, captcha_answer, captcha_token } = req.body || {};
   if (!transfer_number || !branch_id || !company_id || !booking_date || !slot_time || !phone || !full_name || !otp_code || !captcha_answer || !captcha_token) return res.status(400).json({ error: 'Missing required fields' });
-  if (!isValidPhone(phone)) return res.status(400).json({ success: false, message: 'رقم الهاتف يجب أن يكون 10 خانات' });
+  if (!isValidPhone(phone)) return res.status(400).json({ success: false, message: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
+  if (!isValidFullName(full_name)) return res.status(400).json({ success: false, message: 'الاسم يجب أن يحتوي على محارف فقط بدون أرقام' });
 
   const data = await read();
   const locked = ensureNotLocked(data, phone);
