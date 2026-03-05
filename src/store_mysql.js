@@ -174,4 +174,14 @@ async function seedIfNeeded() {
   await write(d);
 }
 
-module.exports = { nowISO, read, write, nextId, seedIfNeeded };
+async function getCooldownData() {
+  const [appointments] = await pool.query('SELECT phone, booking_date, status FROM appointments');
+  const [days] = await pool.query('SELECT branch_id, day_name, active FROM business_days');
+  return {
+    appointments,
+    business_days: days,
+    holidays: []
+  };
+}
+
+module.exports = { nowISO, read, write, nextId, seedIfNeeded, getCooldownData };

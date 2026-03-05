@@ -4,7 +4,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const path = require('path');
-const { read, write, nextId, nowISO, seedIfNeeded } = require('./store');
+const { read, write, nextId, nowISO, seedIfNeeded, getCooldownData } = require('./store');
 
 const app = express();
 const PORT = process.env.PORT || 8090;
@@ -470,7 +470,7 @@ app.post('/api/precheck-booking', async (req, res) => {
     if (!phone || !booking_date || !branch_id) return res.status(400).json({ success: false, message: 'Missing required fields' });
     if (!isValidPhone(phone)) return res.status(400).json({ success: false, message: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
 
-    const data = await read();
+    const data = getCooldownData ? await getCooldownData() : await read();
     const cooldown = checkBookingCooldown(data, { phone, booking_date, branch_id });
     if (cooldown.blocked) {
       return res.status(409).json({

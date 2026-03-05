@@ -100,4 +100,13 @@ function seedIfNeeded() {
   write(d);
 }
 
-module.exports = { FILE, nowISO, read, write, nextId, seedIfNeeded };
+async function getCooldownData() {
+  const d = read();
+  return {
+    appointments: d.appointments || [],
+    business_days: d.business_days || [],
+    holidays: d.holidays || []
+  };
+}
+
+module.exports = { FILE, nowISO, read, write, nextId, seedIfNeeded, getCooldownData };
