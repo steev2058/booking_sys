@@ -690,7 +690,7 @@ app.post('/api/admin/users', auth(['admin']), async (req, res) => {
   const cleanEmpNo = String(employee_no || '').trim();
   const cleanRole = normalizeRole(role);
   if (!cleanUsername) return res.status(400).json({ error: 'username required' });
-  if (!['manager', 'employee'].includes(cleanRole)) return res.status(400).json({ error: 'role must be manager or employee' });
+  if (!['admin', 'manager', 'employee'].includes(cleanRole)) return res.status(400).json({ error: 'role must be admin, manager, or employee' });
   if ((cleanRole === 'employee' || (cleanRole === 'manager' && MANAGER_SCOPED_TO_BRANCH)) && !Number(branch_id)) return res.status(400).json({ error: 'branch_id required for this role' });
   if (data.dashboard_users.some(u => u.username === cleanUsername)) return res.status(409).json({ error: 'username already exists' });
   if (cleanEmpNo && !/^50\d+$/.test(cleanEmpNo)) return res.status(400).json({ error: 'employee_no must start with 50 and contain digits only' });
