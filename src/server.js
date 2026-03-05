@@ -168,6 +168,86 @@ function generateEmployeeNo(data) {
   return `${prefix}${String(max + 1).padStart(3, '0')}`;
 }
 
+function ensureDefaultBusinessDays(data, branchId) {
+  const defaults = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+  for (const day of defaults) {
+    const exists = data.business_days.find(d => Number(d.branch_id) === Number(branchId) && d.day_name === day);
+    if (!exists) {
+      data.business_days.push({
+        id: nextId(data, 'business_days'),
+        branch_id: Number(branchId),
+        day_name: day,
+        start_time: '10:00',
+        end_time: '14:00',
+        interval_minutes: 30,
+        active: 1
+      });
+    } else {
+      exists.start_time = '10:00';
+      exists.end_time = '14:00';
+      exists.interval_minutes = 30;
+      exists.active = 1;
+    }
+  }
+  for (const row of data.business_days.filter(d => Number(d.branch_id) === Number(branchId) && d.day_name === 'Friday')) {
+    row.active = 0;
+  }
+}
+
+function calcSlotEnd(slotStart, minutes = 30) {
+  const [h, m] = String(slotStart).split(':').map(Number);
+  const total = h * 60 + m + minutes;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+function hhmmToMin(v = '00:00') {
+  const [h, m] = String(v).split(':').map(Number);
+  return (h * 60) + m;
+}
+
+async function generateDailyReportsIfNeeded(dateYmd = ymd(new Date())) {
+  const data = await read();
+  let changed = false;
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const holidaysSet = new Set((data.holidays || []).map(h => h.date));
+  if (holidaysSet.has(dateYmd)) return false;
+
+  for (const branch of (data.branches || []).filter(b => Number(b.active) === 1)) {
+    const dayName = EN_DAYS[fromYmd(dateYmd).getDay()];
+    const dayCfg = (data.business_days || []).find(d => Number(d.branch_id) === Number(branch.id) && d.day_name === dayName && Number(d.active) === 1);
+    if (!dayCfg) continue;
+    if (nowMin < hhmmToMin(dayCfg.start_time || '09:00')) continue;
+
+    const exists = (data.daily_reports || []).find(r => r.report_date === dateYmd && Number(r.branch_id) === Number(branch.id));
+    if (exists) continue;
+
+    const rows = (data.appointments || [])
+      .filter(a => a.status === 'booked' && a.booking_date === dateYmd && Number(a.branch_id) === Number(branch.id))
+      .map(a => ({
+        id: a.id,
+        full_name: a.full_name || '',
+        phone: a.phone,
+        transfer_number: a.transfer_number,
+        slot_from: a.slot_time,
+        slot_to: a.slot_to || ''
+      }));
+
+    data.daily_reports = data.daily_reports || [];
+    data.daily_reports.push({
+      id: nextId(data, 'daily_reports'),
+      report_date: dateYmd,
+      branch_id: Number(branch.id),
+      total_booked: rows.length,
+      payload: rows,
+      created_at: nowISO()
+    });
+    changed = true;
+  }
+
+  if (changed) await write(data);
+  return changed;
+}
+
 
 async function sendSmsRaw(phone, msg) {
   const qs = new URLSearchParams({ User: SMS_USER, Pass: SMS_PASS, From: SMS_FROM, Gsm: phone, Msg: msg, Lang: '0' });
