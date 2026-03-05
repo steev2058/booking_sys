@@ -8,6 +8,13 @@ const { read, write, nextId, nowISO, seedIfNeeded } = require('./store');
 
 const app = express();
 const PORT = process.env.PORT || 8090;
+
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] uncaughtException:', err && (err.stack || err.message || err));
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] unhandledRejection:', reason && (reason.stack || reason.message || reason));
+});
 const JWT_SECRET = process.env.JWT_SECRET || 'change_me_secret';
 const SMS_ENDPOINT = process.env.SMS_ENDPOINT || 'https://services.mtnsyr.com:7443/General/MTNSERVICES/ConcatenatedSender.aspx';
 const SMS_USER = process.env.SMS_USER || 'ALbaraka2013';
@@ -27,6 +34,14 @@ const MANAGER_SCOPED_TO_BRANCH = String(process.env.MANAGER_SCOPED_TO_BRANCH || 
 
 app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/precheck-booking') || req.path.startsWith('/api/captcha')) {
+    const started = Date.now();
+    console.log(`[REQ] ${req.method} ${req.path}`);
+    res.on('finish', () => console.log(`[RES] ${req.method} ${req.path} -> ${res.statusCode} (${Date.now() - started}ms)`));
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/admin', express.static(path.join(__dirname, '..', 'admin')));
 
@@ -450,22 +465,27 @@ app.get('/api/precheck-booking', (_req, res) => {
 });
 
 app.post('/api/precheck-booking', async (req, res) => {
-  const { phone, booking_date, branch_id } = req.body || {};
-  if (!phone || !booking_date || !branch_id) return res.status(400).json({ success: false, message: 'Missing required fields' });
-  if (!isValidPhone(phone)) return res.status(400).json({ success: false, message: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
+  try {
+    const { phone, booking_date, branch_id } = req.body || {};
+    if (!phone || !booking_date || !branch_id) return res.status(400).json({ success: false, message: 'Missing required fields' });
+    if (!isValidPhone(phone)) return res.status(400).json({ success: false, message: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
 
-  const data = await read();
-  const cooldown = checkBookingCooldown(data, { phone, booking_date, branch_id });
-  if (cooldown.blocked) {
-    return res.status(409).json({
-      success: false,
-      message: `لا يمكن الحجز الآن لنفس العميل. يمكنك الحجز بعد: ${cooldown.earliest}`,
-      code: 'BOOKING_COOLDOWN',
-      earliest_date: cooldown.earliest
-    });
+    const data = await read();
+    const cooldown = checkBookingCooldown(data, { phone, booking_date, branch_id });
+    if (cooldown.blocked) {
+      return res.status(409).json({
+        success: false,
+        message: `لا يمكن الحجز الآن لنفس العميل. يمكنك الحجز بعد: ${cooldown.earliest}`,
+        code: 'BOOKING_COOLDOWN',
+        earliest_date: cooldown.earliest
+      });
+    }
+
+    return res.json({ success: true });
+  } catch (e) {
+    console.error('[ERR] /api/precheck-booking:', e && (e.stack || e.message || e));
+    return res.status(500).json({ success: false, message: 'خطأ داخلي أثناء التحقق المسبق' });
   }
-
-  return res.json({ success: true });
 });
 
 app.post('/api/send-otp', async (req, res) => {
