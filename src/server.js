@@ -254,11 +254,25 @@ function hhmmToMin(v = '00:00') {
   return (h * 60) + m;
 }
 
+function normalizeAppointmentDate(a) {
+  if (a.booking_date) {
+    const raw = String(a.booking_date);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const d = new Date(raw);
+    if (!Number.isNaN(d.getTime())) return ymd(d);
+  }
+  if (a.created_at) {
+    const d = new Date(a.created_at);
+    if (!Number.isNaN(d.getTime())) return ymd(d);
+  }
+  return null;
+}
+
 function buildLiveReportsForDate(data, dateYmd, scopedBranchId = null) {
   const branches = (data.branches || []).filter(b => Number(b.active) === 1 && (!scopedBranchId || Number(b.id) === Number(scopedBranchId)));
   return branches.map(branch => {
     const rows = (data.appointments || [])
-      .filter(a => a.status === 'booked' && Number(a.branch_id) === Number(branch.id) && (a.booking_date === dateYmd || (!a.booking_date && a.created_at && ymd(a.created_at) === dateYmd)))
+      .filter(a => a.status === 'booked' && Number(a.branch_id) === Number(branch.id) && normalizeAppointmentDate(a) === dateYmd)
       .map(a => ({
         id: a.id,
         full_name: a.full_name || '',
