@@ -119,9 +119,7 @@
         </div>
 
         <div class="actions">
-          <button onclick="sendOtp()">إرسال رمز 4 خانات</button>
-          <input id="otp" placeholder="ادخل الرمز" style="max-width:180px">
-          <button onclick="book()">تأكيد الحجز</button>
+          <button onclick="verifyCaptchaAndSendOtp()">تأكيد والتحقق من الكابتشا</button>
           <button class="alt" onclick="nextStep(2)">رجوع</button>
         </div>
       </div>
@@ -130,6 +128,24 @@
     </div>
     <div class="footer">جميع الحقوق محفوظة لبنك البركة © 2026</div>
   </div>
+  
+  <div id="otpModal" class="modal-backdrop">
+    <div class="modal-box" style="max-width:380px">
+      <div class="modal-title">إدخال رمز OTP</div>
+      <div class="modal-text">أدخل رمز 4 خانات المرسل إلى هاتفك</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px">
+        <input id="o1" maxlength="1" inputmode="numeric" style="width:54px;text-align:center;font-size:24px">
+        <input id="o2" maxlength="1" inputmode="numeric" style="width:54px;text-align:center;font-size:24px">
+        <input id="o3" maxlength="1" inputmode="numeric" style="width:54px;text-align:center;font-size:24px">
+        <input id="o4" maxlength="1" inputmode="numeric" style="width:54px;text-align:center;font-size:24px">
+      </div>
+      <div class="modal-actions">
+        <button class="alt" id="otpCancel" type="button">إلغاء</button>
+        <button id="otpConfirm" type="button">تأكيد الحجز</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" style="position:fixed;left:16px;bottom:16px;background:#263238;color:#fff;padding:10px 14px;border-radius:10px;font-weight:700;display:none;z-index:9999"></div>
   <div id="confirmModal" class="modal-backdrop">
     <div class="modal-box">

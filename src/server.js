@@ -93,7 +93,7 @@ function makeSlots(start, end, interval = 30) {
 }
 
 function createCaptcha() {
-  const chars = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+  const chars = '0123456789';
   let code = '';
   for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
 
@@ -290,15 +290,14 @@ app.post('/api/send-otp', async (req, res) => {
 });
 
 app.post('/api/book', async (req, res) => {
-  const { transfer_number, branch_id, company_id, booking_date, slot_time, phone, full_name, otp_code, captcha_answer, captcha_token } = req.body || {};
-  if (!transfer_number || !branch_id || !company_id || !booking_date || !slot_time || !phone || !full_name || !otp_code || !captcha_answer || !captcha_token) return res.status(400).json({ error: 'Missing required fields' });
+  const { transfer_number, branch_id, company_id, booking_date, slot_time, phone, full_name, otp_code } = req.body || {};
+  if (!transfer_number || !branch_id || !company_id || !booking_date || !slot_time || !phone || !full_name || !otp_code) return res.status(400).json({ error: 'Missing required fields' });
   if (!isValidPhone(phone)) return res.status(400).json({ success: false, message: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
   if (!isValidFullName(full_name)) return res.status(400).json({ success: false, message: 'الاسم يجب أن يحتوي على محارف فقط بدون أرقام' });
 
   const data = await read();
   const locked = ensureNotLocked(data, phone);
   if (!locked.ok) return res.status(429).json({ success: false, message: 'تم قفل المحاولات مؤقتاً، حاول لاحقاً' });
-  if (!verifyCaptcha(captcha_answer, captcha_token)) return res.status(400).json({ success: false, message: 'فشل التحقق من الكابتشا' });
 
   const cleanName = String(full_name || '').trim();
   const otp = [...data.otp_codes].reverse().find(o => o.phone === phone && o.transfer_number === transfer_number && o.code === otp_code);
