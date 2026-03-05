@@ -112,7 +112,7 @@
       <div id="p3" class="section">
         <label>CAPTCHA</label>
         <div class="captcha-wrap">
-          <img id="captchaImg" class="captcha-img" alt="captcha" onerror="this.style.display='none';captchaFallback.textContent='تعذر تحميل الصورة - اضغط تحديث';">
+          <img id="captchaImg" class="captcha-img" alt="captcha" onerror="this.style.display='none';captchaFallback.textContent='تعذر تحميل الصورة - جارِ إعادة المحاولة...';setTimeout(()=>refreshCaptcha(),250);">
           <div id="captchaFallback" class="captcha-fallback"></div>
           <button id="captchaRefreshBtn" class="alt" type="button" onclick="refreshCaptcha(true)">تحديث</button>
           <input id="captchaA" placeholder="ادخل الرمز في الصورة" style="max-width:240px;direction:ltr;text-align:left" inputmode="numeric">
@@ -222,17 +222,16 @@ async function refreshCaptcha(forceCloseOtp=false){
   if(forceCloseOtp && window.otpModalEl) otpModalEl.style.display='none';
   const cap=await j('/api/captcha?t='+Date.now());
   captchaToken=cap.token;
+  captchaFallback.textContent=cap.challenge||'CAPTCHA';
   if(cap.image){
     captchaImg.style.display='block';
     captchaImg.src=cap.image;
-    captchaFallback.textContent='';
   }else{
     captchaImg.style.display='none';
-    captchaFallback.textContent=cap.challenge||'CAPTCHA';
   }
   if(rb) rb.disabled=false;
 }
-async function init(){phone.value='09';const b=await j('/api/branches',{},true);branch.innerHTML=b.branches.map(x=>`<option value="${x.id}">${x.name} - ${x.location}</option>`).join('');const c=await j('/api/companies',{},true);const companies=(c.companies||[]);company.innerHTML=companies.map(x=>`<option value="${x.id}">${x.name}${x.description?` - ${x.description}`:''}</option>`).join('');if(!companies.length){setBookingEnabled(false);return;}setBookingEnabled(true);await refreshCaptcha();await loadDays();}
+async function init(){phone.value='09';const b=await j('/api/branches',{},true);branch.innerHTML=b.branches.map(x=>`<option value="${x.id}">${x.name} - ${x.location}</option>`).join('');const c=await j('/api/companies',{},true);const companies=(c.companies||[]);company.innerHTML=companies.map(x=>`<option value="${x.id}">${x.name}${x.description?` - ${x.description}`:''}</option>`).join('');if(!companies.length){setBookingEnabled(false);return;}setBookingEnabled(true);await refreshCaptcha();setTimeout(()=>{if(captchaImg && captchaImg.style.display==='none') refreshCaptcha();},350);await loadDays();}
 async function loadDays(){const d=await j('/api/business-days?branch_id='+branch.value,{},true);daysConfig=d.days||[];selectedDate='';days.innerHTML=daysConfig.map((x,i)=>`<div class="chip ${i===0?'active':''}" data-date="${x.date}">${x.day_name_ar} (${x.date})</div>`).join('');if(daysConfig[0])selectedDate=daysConfig[0].date;document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');selectedDate=el.dataset.date;loadSlots();});await loadSlots();}
 async function loadSlots(){selectedSlot='';if(!selectedDate){slots.innerHTML='';return;}const s=await j(`/api/slots?branch_id=${branch.value}&booking_date=${encodeURIComponent(selectedDate)}`,{},true);slots.innerHTML=(s.slots||[]).map(x=>`<div class="slot ${x.available?'':'na'}" data-time="${x.time}"><span>⏱</span><span>${x.time} - ${x.to_time}${x.available?'':` (ممتلئة)`}</span></div>`).join('');document.querySelectorAll('.slot:not(.na)').forEach(el=>el.onclick=()=>{document.querySelectorAll('.slot').forEach(a=>a.classList.remove('sel'));el.classList.add('sel');selectedSlot=el.dataset.time;});}
 branch.onchange=loadDays;
