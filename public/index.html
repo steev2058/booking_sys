@@ -126,6 +126,13 @@
 
       <div id="msg" class="msg"></div>
     </div>
+
+    <div id="successView" class="card" style="display:none">
+      <h3 style="margin-top:0">✅ تم حجز الموعد بنجاح</h3>
+      <div id="successDetails" class="msg" style="display:block;color:#1b5e20"></div>
+      <div class="actions"><button onclick="backToHomeAfterSuccess()">العودة إلى الرئيسية</button></div>
+    </div>
+
     <div class="footer">جميع الحقوق محفوظة لبنك البركة © 2026</div>
   </div>
   
@@ -260,11 +267,41 @@ otpConfirmEl.onclick=async()=>{
     msg.style.color=r.success?'#1b5e20':'#b00020';
     msg.textContent=r.message||r.error||'خطأ غير متوقع';
     showToast(r.message||r.error||'خطأ غير متوقع',!!r.success);
-    if(r.success){otpModalEl.style.display='none';msg.style.color='#1b5e20';msg.textContent='تم الحجز بنجاح';showToast('تم الحجز بنجاح',true);await loadSlots();step=1;setStep();await refreshCaptcha();}
+    if(r.success){otpModalEl.style.display='none';msg.style.color='#1b5e20';msg.textContent='تم الحجز بنجاح';showToast('تم الحجز بنجاح',true);showSuccessView(r);resetBookingForm();await loadSlots();step=1;setStep();await refreshCaptcha();}
   } finally {
     otpConfirmEl.disabled=false;
   }
 };
+
+
+function resetBookingForm(){
+  transfer.value='';
+  phone.value='09';
+  full_name.value='';
+  captchaA.value='';
+  otpRequestLocked=false;
+  if(window.verifyBtn) verifyBtn.disabled=false;
+}
+
+function showSuccessView(payload={}){
+  const branchName=branch.options[branch.selectedIndex]?.textContent||'';
+  const companyName=company.options[company.selectedIndex]?.textContent||'';
+  const details=`الفرع: ${branchName}<br>شركة الحوالات: ${companyName}<br>رقم الحوالة: ${transfer.value}<br>الهاتف: ${phone.value}<br>التاريخ: ${selectedDate||'-'}<br>الوقت: ${selectedSlot||'-'}`;
+  successDetails.innerHTML=details;
+  document.querySelector('.card').style.display='none';
+  successView.style.display='block';
+}
+
+async function backToHomeAfterSuccess(){
+  successView.style.display='none';
+  document.querySelector('.card').style.display='block';
+  resetBookingForm();
+  await refreshCaptcha();
+  await loadDays();
+  step=1;
+  setStep();
+  clearMsg();
+}
 
 init();
 </script>
