@@ -168,6 +168,55 @@ function generateEmployeeNo(data) {
   return `${prefix}${String(max + 1).padStart(3, '0')}`;
 }
 
+function getSec(data, phone) {
+  data.otp_security = data.otp_security || [];
+  let row = data.otp_security.find(x => x.phone === phone);
+  if (!row) {
+    row = { phone, send_count: 0, window_start: nowISO(), verify_fail_count: 0, locked_until: null };
+    data.otp_security.push(row);
+  }
+  return row;
+}
+
+function ensureNotLocked(data, phone) {
+  const sec = getSec(data, phone);
+  if (sec.locked_until && new Date(sec.locked_until).getTime() > Date.now()) {
+    return { ok: false, message: `Too many attempts. Try again after ${sec.locked_until}` };
+  }
+  return { ok: true };
+}
+
+function canSendOtp(data, phone) {
+  const sec = getSec(data, phone);
+  const now = Date.now();
+  const windowMs = OTP_WINDOW_MINUTES * 60 * 1000;
+  const ws = sec.window_start ? new Date(sec.window_start).getTime() : 0;
+  if (!ws || now - ws > windowMs) {
+    sec.send_count = 0;
+    sec.window_start = nowISO();
+  }
+  if (sec.send_count >= OTP_MAX_PER_WINDOW) return false;
+  sec.send_count += 1;
+  return true;
+}
+
+function trackVerifyFail(data, phone) {
+  const sec = getSec(data, phone);
+  sec.verify_fail_count = Number(sec.verify_fail_count || 0) + 1;
+  if (sec.verify_fail_count >= OTP_MAX_VERIFY_ATTEMPTS) {
+    sec.verify_fail_count = 0;
+    sec.locked_until = new Date(Date.now() + OTP_LOCK_MINUTES * 60 * 1000).toISOString();
+    return { locked: true, lockedUntil: sec.locked_until };
+  }
+  return { locked: false };
+}
+
+function resetVerifyFail(data, phone) {
+  const sec = getSec(data, phone);
+  sec.verify_fail_count = 0;
+  sec.locked_until = null;
+}
+
 function ensureDefaultBusinessDays(data, branchId) {
   const defaults = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
   for (const day of defaults) {
