@@ -82,9 +82,9 @@
     <div class="hero"><h1>خدمة حجز موعد</h1><p>الرجاء اتباع الخطوات التالية لإتمام الحجز</p></div>
 
     <div class="steps">
-      <div id="s1" class="step active">1) بيانات الحوالة</div>
-      <div id="s2" class="step">2) اختيار اليوم والوقت</div>
-      <div id="s3" class="step">3) التحقق والتأكيد</div>
+      <div id="s1" class="step active" onclick="goStep(1)" style="cursor:pointer">1) بيانات الحوالة</div>
+      <div id="s2" class="step" onclick="goStep(2)" style="cursor:pointer">2) اختيار اليوم والوقت</div>
+      <div id="s3" class="step" onclick="goStep(3)" style="cursor:pointer">3) التحقق والتأكيد</div>
     </div>
 
     <div class="card">
@@ -161,6 +161,7 @@
 <script>
 let captchaToken='',selectedSlot='',selectedDate='',daysConfig=[],step=1,bookingEnabled=true;
 const setStep=()=>{['p1','p2','p3'].forEach((x,i)=>document.getElementById(x).classList.toggle('active',i+1===step));['s1','s2','s3'].forEach((x,i)=>document.getElementById(x).classList.toggle('active',i+1===step));}
+function goStep(n){if(n===2||n===3){nextStep(n);return;}step=n;setStep();}
 function showToast(text, ok=true){const t=document.getElementById('toast');t.textContent=text;t.style.background=ok?'#1b5e20':'#b00020';t.style.display='block';clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.style.display='none',2500)}
 function confirmAction(text){return new Promise((resolve)=>{const m=document.getElementById('confirmModal');document.getElementById('confirmText').textContent=text;m.style.display='flex';document.getElementById('confirmYes').onclick=()=>{m.style.display='none';resolve(true)};document.getElementById('confirmNo').onclick=()=>{m.style.display='none';resolve(false)};});}
 function clearMsg(){msg.textContent='';}
