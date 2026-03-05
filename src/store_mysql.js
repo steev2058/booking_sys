@@ -12,8 +12,13 @@ const pool = mysql.createPool({
   password: process.env.DB_PASS || 'booking_pass',
   database: process.env.DB_NAME || 'booking_sys',
   waitForConnections: true,
-  connectionLimit: 10
+  connectionLimit: 10,
+  connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 7000)
 });
+
+async function q(sql, values = []) {
+  return pool.query({ sql, values, timeout: Number(process.env.DB_QUERY_TIMEOUT_MS || 7000) });
+}
 
 const TABLE_KEYS = ['branches', 'remittance_companies', 'business_days', 'appointments', 'dashboard_users', 'otp_codes', 'daily_reports'];
 
@@ -175,8 +180,8 @@ async function seedIfNeeded() {
 }
 
 async function getCooldownData() {
-  const [appointments] = await pool.query('SELECT phone, booking_date, status FROM appointments');
-  const [days] = await pool.query('SELECT branch_id, day_name, active FROM business_days');
+  const [appointments] = await q('SELECT phone, booking_date, status FROM appointments');
+  const [days] = await q('SELECT branch_id, day_name, active FROM business_days');
   return {
     appointments,
     business_days: days,
