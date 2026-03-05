@@ -192,7 +192,17 @@ function setBookingEnabled(enabled){
   }
 }
 function nextStep(n){if(!bookingEnabled){showToast('الحجز متوقف حالياً لعدم توفر شركات حوالات',false);return;}const transferVal=String(document.getElementById('transfer').value||'').trim();const phoneVal=String(document.getElementById('phone').value||'').trim();const fullNameVal=String(document.getElementById('full_name').value||'').trim();if(n===2&&(!transferVal||!phoneVal||!fullNameVal)){msg.style.color='#b00020';msg.textContent='يرجى تعبئة رقم الحوالة والهاتف والاسم الثلاثي';showToast('يرجى تعبئة رقم الحوالة والهاتف والاسم الثلاثي',false);return;}if(n===2&&!/^09\d{8}$/.test(phoneVal)){msg.style.color='#b00020';msg.textContent='رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام';showToast('رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام',false);return;}if(n===2&&!isValidName(fullNameVal)){msg.style.color='#b00020';msg.textContent='الاسم يجب أن يحتوي محارف فقط بدون أرقام';showToast('الاسم يجب أن يحتوي محارف فقط بدون أرقام',false);return;}if(n===3&&!selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';showToast('الرجاء اختيار وقت متاح',false);return;}clearMsg();step=n;setStep();}
-async function j(url, options){const r=await fetch(url, options);return await r.json();}
+async function j(url, options){
+  try {
+    const r=await fetch(url, options);
+    let body={};
+    try{ body=await r.json(); } catch { body={}; }
+    if(!r.ok && !body.error && !body.message) body.error=`HTTP ${r.status}`;
+    return body;
+  } catch {
+    return { ok:false, success:false, error:'تعذر الاتصال بالخادم. يرجى المحاولة لاحقاً.' };
+  }
+}
 async function refreshCaptcha(forceCloseOtp=false){
   otpRequestLocked=false;
   if(window.verifyBtn) verifyBtn.disabled=false;
