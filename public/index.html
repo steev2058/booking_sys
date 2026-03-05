@@ -177,6 +177,13 @@ function clearMsg(){msg.textContent='';}
 function sanitizePhone(v){let d=String(v||'').replace(/\D/g,'');if(!d.startsWith('09')) d='09'+d.replace(/^0+/,'');d=d.slice(0,10);if(d.length<2)d='09';return d;}
 function sanitizeName(v){return String(v||'').replace(/[^A-Za-z\u0600-\u06FF\s]/g,'').replace(/\s{2,}/g,' ').trimStart();}
 function isValidName(v){return /^[A-Za-z\u0600-\u06FF\s]{3,}$/.test(String(v||'').trim());}
+function extractCaptchaFromToken(token){
+  try{
+    const raw=atob(String(token||''));
+    const code=(raw.split(':')[0]||'').replace(/\D/g,'').slice(0,5);
+    return code;
+  }catch{return '';}
+}
 
 function setBookingEnabled(enabled){
   bookingEnabled=!!enabled;
@@ -222,7 +229,10 @@ async function refreshCaptcha(forceCloseOtp=false){
   if(forceCloseOtp && window.otpModalEl) otpModalEl.style.display='none';
   const cap=await j('/api/captcha?t='+Date.now());
   captchaToken=cap.token;
-  captchaFallback.textContent=cap.challenge||'CAPTCHA';
+  const fromToken=extractCaptchaFromToken(cap.token);
+  const fromApi=String(cap.challenge||'').replace(/\D/g,'').slice(0,5);
+  const safeChallenge=(fromApi||fromToken||'').split('').join(' ');
+  captchaFallback.textContent=safeChallenge||'يرجى الضغط على تحديث';
   if(cap.image){
     captchaImg.style.display='block';
     captchaImg.src=cap.image;
