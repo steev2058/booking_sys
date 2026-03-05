@@ -114,7 +114,7 @@
         <div class="captcha-wrap">
           <img id="captchaImg" class="captcha-img" alt="captcha" onerror="this.style.display='none';captchaFallback.textContent='تعذر تحميل الصورة - اضغط تحديث';">
           <div id="captchaFallback" class="captcha-fallback"></div>
-          <button class="alt" onclick="refreshCaptcha()">تحديث</button>
+          <button class="alt" type="button" onclick="refreshCaptcha(true)">تحديث</button>
           <input id="captchaA" placeholder="ادخل الرمز في الصورة" style="max-width:240px;direction:ltr;text-align:left" inputmode="numeric">
         </div>
 
@@ -193,10 +193,11 @@ function setBookingEnabled(enabled){
 }
 function nextStep(n){if(!bookingEnabled){showToast('الحجز متوقف حالياً لعدم توفر شركات حوالات',false);return;}const transferVal=String(document.getElementById('transfer').value||'').trim();const phoneVal=String(document.getElementById('phone').value||'').trim();const fullNameVal=String(document.getElementById('full_name').value||'').trim();if(n===2&&(!transferVal||!phoneVal||!fullNameVal)){msg.style.color='#b00020';msg.textContent='يرجى تعبئة رقم الحوالة والهاتف والاسم الثلاثي';showToast('يرجى تعبئة رقم الحوالة والهاتف والاسم الثلاثي',false);return;}if(n===2&&!/^09\d{8}$/.test(phoneVal)){msg.style.color='#b00020';msg.textContent='رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام';showToast('رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام',false);return;}if(n===2&&!isValidName(fullNameVal)){msg.style.color='#b00020';msg.textContent='الاسم يجب أن يحتوي محارف فقط بدون أرقام';showToast('الاسم يجب أن يحتوي محارف فقط بدون أرقام',false);return;}if(n===3&&!selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';showToast('الرجاء اختيار وقت متاح',false);return;}clearMsg();step=n;setStep();}
 async function j(url, options){const r=await fetch(url, options);return await r.json();}
-async function refreshCaptcha(){
+async function refreshCaptcha(forceCloseOtp=false){
   otpRequestLocked=false;
   if(window.verifyBtn) verifyBtn.disabled=false;
-  const cap=await j('/api/captcha');
+  if(forceCloseOtp && window.otpModalEl) otpModalEl.style.display='none';
+  const cap=await j('/api/captcha?t='+Date.now());
   captchaToken=cap.token;
   if(cap.image){
     captchaImg.style.display='block';
@@ -232,7 +233,7 @@ function openOtpModal(){
   });
   otpInputs[0].focus();
 }
-otpCancelEl.onclick=()=>{otpModalEl.style.display='none';};
+otpCancelEl.onclick=async()=>{otpModalEl.style.display='none';await refreshCaptcha();};
 
 async function verifyCaptchaAndSendOtp(){
   if(!bookingEnabled){showToast('الحجز متوقف حالياً لعدم توفر شركات حوالات',false);return;}
