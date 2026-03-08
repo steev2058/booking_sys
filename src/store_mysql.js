@@ -180,13 +180,26 @@ async function seedIfNeeded() {
 }
 
 async function getCooldownData() {
-  const [appointments] = await q('SELECT phone, booking_date, status FROM appointments');
-  const [days] = await q('SELECT branch_id, day_name, active FROM business_days');
-  return {
-    appointments,
-    business_days: days,
-    holidays: []
-  };
+  // Use a dedicated short-lived connection so precheck cannot hang on pool starvation.
+  const conn = await mysql.createConnection({
+    host: process.env.DB_HOST || '127.0.0.1',
+    port: Number(process.env.DB_PORT || 3306),
+    user: process.env.DB_USER || 'booking_user',
+    password: process.env.DB_PASS || 'booking_pass',
+    database: process.env.DB_NAME || 'booking_sys',
+    connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 7000)
+  });
+  try {
+    const [appointments] = await conn.query({ sql: 'SELECT phone, booking_date, status FROM appointments', timeout: Number(process.env.DB_QUERY_TIMEOUT_MS || 7000) });
+    const [days] = await conn.query({ sql: 'SELECT branch_id, day_name, active FROM business_days', timeout: Number(process.env.DB_QUERY_TIMEOUT_MS || 7000) });
+    return {
+      appointments,
+      business_days: days,
+      holidays: []
+    };
+  } finally {
+    try { await conn.end(); } catch {}
+  }
 }
 
 module.exports = { nowISO, read, write, nextId, seedIfNeeded, getCooldownData };
