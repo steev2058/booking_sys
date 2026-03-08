@@ -141,8 +141,9 @@
         <div class="field" style="max-width: 19%;margin-bottom: 2%;"><label>تاريخ التقرير</label><input id="r_date" type="date"></div>
         <button onclick="loadReports()">عرض التقارير</button>
         <button id="btnGenerateReports" onclick="generateReports()">توليد الآن</button>
+        <button onclick="exportReportsExcel()">تنزيل Excel</button>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>الفرع</th><th>عدد الحجوزات</th><th>البيانات (الاسم/الهاتف/الوقت)</th></tr></thead><tbody id="reportsTb"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>الفرع</th><th>عدد الحجوزات</th></tr></thead><tbody id="reportsTb"></tbody></table></div>
     </div>
   </div>
 </div>
@@ -184,7 +185,7 @@
 <div id="adminLoader" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,.55);z-index:10002;align-items:center;justify-content:center"><div style="background:#fff;border:1px solid #d9dfe6;border-radius:12px;padding:10px 14px;font-weight:800">جاري التحميل...</div></div>
 
 <script>
-let token=''; let role=''; let myBranchId=null; let branchesCache=[]; let apptsCache=[]; let usersCache=[];
+let token=''; let role=''; let myBranchId=null; let branchesCache=[]; let apptsCache=[]; let usersCache=[]; let reportsCache=[];
 const SESSION_KEY='booking_admin_session_v1';
 let __adminLoad=0;
 function setAdminLoading(on){
@@ -278,7 +279,8 @@ async function resetUserPass(id){if(!await confirmAction('توليد كلمة س
 
 async function delUser(id){if(!await confirmAction('تأكيد حذف المستخدم؟'))return;const r=await j('/api/admin/users/'+id,{method:'DELETE',headers:{Authorization:'Bearer '+token}});if(!r.ok){showToast(r.error||'فشل الحذف',false);return;}await loadUsers();showToast('تم حذف المستخدم');}
 
-async function loadReports(){const date=r_date.value||new Date().toISOString().slice(0,10);const r=await j('/api/admin/reports/daily?date='+encodeURIComponent(date),{headers:{Authorization:'Bearer '+token}});reportsTb.innerHTML=(r.reports||[]).map(x=>`<tr><td>${x.branch_name}</td><td>${x.total_booked}</td><td>${(x.payload||[]).map(p=>`${p.full_name||'-'} | ${p.phone} | ${p.slot_from}-${p.slot_to}`).join('<br>')||'-'}</td></tr>`).join('');}
+async function loadReports(){const date=r_date.value||new Date().toISOString().slice(0,10);const r=await j('/api/admin/reports/daily?date='+encodeURIComponent(date),{headers:{Authorization:'Bearer '+token}});reportsCache=(r.reports||[]);reportsTb.innerHTML=reportsCache.map(x=>`<tr><td>${x.branch_name}</td><td>${x.total_booked}</td></tr>`).join('');}
+function exportReportsExcel(){const date=r_date.value||new Date().toISOString().slice(0,10);const rows=(reportsCache||[]);if(!rows.length){showToast('لا توجد بيانات للتصدير',false);return;}const header=['الفرع','عدد الحجوزات','البيانات'];const lines=[header.join('\t')];for(const x of rows){const details=(x.payload||[]).map(p=>`${p.full_name||'-'} | ${p.phone||'-'} | ${p.slot_from||'-'}-${p.slot_to||'-'}`).join(' ; ')||'-';lines.push([x.branch_name||'',x.total_booked||0,details].join('\t'));}const content='\uFEFF'+lines.join('\n');const blob=new Blob([content],{type:'application/vnd.ms-excel;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`daily_reports_${date}.xls`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href);}
 async function generateReports(){const date=r_date.value||new Date().toISOString().slice(0,10);const r=await j('/api/admin/reports/daily/generate',{method:'POST',headers:h(),body:JSON.stringify({date})});if(!r.ok){showToast(r.error||'فشل توليد التقرير',false);return;}showToast('تم توليد التقارير بنجاح');await loadReports();}
 
 apptsSearch?.addEventListener('input',renderAppointments);
