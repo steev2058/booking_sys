@@ -113,7 +113,7 @@
         <label>CAPTCHA</label>
         <div class="captcha-wrap">
           <img id="captchaImg" class="captcha-img" alt="captcha" onerror="this.style.display='none';captchaFallback.textContent='تعذر تحميل الصورة - جارِ إعادة المحاولة...';setTimeout(()=>refreshCaptcha(),250);">
-          <div id="captchaFallback" class="captcha-fallback"></div>
+          <div id="captchaFallback" class="captcha-fallback" style="display:none"></div>
           <button id="captchaRefreshBtn" class="alt" type="button" onclick="refreshCaptcha(true)">تحديث</button>
           <input id="captchaA" placeholder="ادخل الرمز في الصورة" style="max-width:240px;direction:ltr;text-align:left" inputmode="numeric">
         </div>
