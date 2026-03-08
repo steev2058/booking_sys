@@ -84,8 +84,12 @@ function fromYmd(s) {
 
 function addWorkingDays(startDateYmd, daysToAdd, allowedDayNames, holidaysSet = new Set()) {
   let d = fromYmd(startDateYmd);
+  if (Number.isNaN(d.getTime())) return null;
   let added = 0;
+  let guard = 0;
   while (added < daysToAdd) {
+    guard += 1;
+    if (guard > 400) return null; // safety guard against malformed data
     d.setDate(d.getDate() + 1);
     const en = EN_DAYS[d.getDay()];
     const key = ymd(d);
@@ -104,8 +108,10 @@ function checkBookingCooldown(data, { phone, booking_date, branch_id }) {
   const samePhoneBookings = data.appointments.filter(a => a.status === 'booked' && String(a.phone || '') === String(phone || ''));
 
   for (const b of samePhoneBookings) {
-    if (!b.booking_date) continue;
-    const earliest = addWorkingDays(b.booking_date, 2, validDayNames, holidaysSet);
+    const bDate = normalizeAppointmentDate(b);
+    if (!bDate) continue;
+    const earliest = addWorkingDays(bDate, 2, validDayNames, holidaysSet);
+    if (!earliest) continue;
     if (booking_date < earliest) {
       return { blocked: true, earliest };
     }
