@@ -465,6 +465,14 @@ app.get('/api/precheck-booking', (_req, res) => {
 });
 
 app.post('/api/precheck-booking', async (req, res) => {
+  const hardStopMs = Number(process.env.PRECHECK_HARD_TIMEOUT_MS || 9000);
+  const hardStop = setTimeout(() => {
+    if (!res.headersSent) {
+      console.error('[ERR] /api/precheck-booking: hard-timeout reached');
+      res.status(504).json({ success: false, message: 'انتهت مهلة التحقق المسبق. حاول مرة أخرى.' });
+    }
+  }, hardStopMs);
+
   try {
     const { phone, booking_date, branch_id } = req.body || {};
     if (!phone || !booking_date || !branch_id) return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -491,6 +499,8 @@ app.post('/api/precheck-booking', async (req, res) => {
       return res.status(504).json({ success: false, message: 'انتهت مهلة الاتصال بقاعدة البيانات أثناء التحقق. تحقق من MySQL ثم أعد المحاولة.' });
     }
     return res.status(500).json({ success: false, message: 'خطأ داخلي أثناء التحقق المسبق' });
+  } finally {
+    clearTimeout(hardStop);
   }
 });
 

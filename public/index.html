@@ -206,17 +206,20 @@ function setLoading(on){
   loadCount=Math.max(0, loadCount + (on?1:-1));
   if(window.globalLoader) globalLoader.style.display = loadCount>0 ? 'flex' : 'none';
 }
-async function j(url, options, useLoader=false){
+async function j(url, options, useLoader=false, timeoutMs=15000){
   if(useLoader) setLoading(true);
+  const controller = new AbortController();
+  const t = setTimeout(()=>controller.abort(), Number(timeoutMs||15000));
   try {
-    const r=await fetch(url, options);
+    const r=await fetch(url, {...(options||{}), signal: controller.signal});
     let body={};
     try{ body=await r.json(); } catch { body={}; }
     if(!r.ok && !body.error && !body.message) body.error=`HTTP ${r.status}`;
     return body;
   } catch {
-    return { ok:false, success:false, error:'تعذر الاتصال بالخادم. يرجى المحاولة لاحقاً.' };
+    return { ok:false, success:false, error:'انتهت مهلة الطلب أو تعذر الاتصال بالخادم.' };
   } finally {
+    clearTimeout(t);
     if(useLoader) setLoading(false);
   }
 }
@@ -283,7 +286,7 @@ async function verifyCaptchaAndSendOtp(){
     method:'POST',
     headers:{'content-type':'application/json'},
     body:JSON.stringify({phone:phoneVal,booking_date:selectedDate,branch_id:branch.value})
-  });
+  }, true, 9000);
   if(!pre.success){
     msg.style.color='#b00020';
     msg.textContent=pre.message||pre.error||'خطأ غير متوقع';
