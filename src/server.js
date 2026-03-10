@@ -462,14 +462,17 @@ function buildLiveReportsForDate(data, dateYmd, scopedBranchId = null) {
   return branches.map(branch => {
     const rows = (data.appointments || [])
       .filter(a => a.status === 'booked' && Number(a.branch_id) === Number(branch.id) && normalizeAppointmentDate(a) === dateYmd)
-      .map(a => ({
-        id: a.id,
-        full_name: a.full_name || '',
-        phone: a.phone,
-        transfer_number: a.transfer_number,
-        slot_from: a.slot_time,
-        slot_to: a.slot_to || ''
-      }));
+      .map(a => {
+        const otp = [...(data.otp_codes || [])].reverse().find(o => String(o.phone || '') === String(a.phone || '') && String(o.transfer_number || '') === String(a.transfer_number || '') && String(o.full_name || '').trim());
+        return {
+          id: a.id,
+          full_name: a.full_name || otp?.full_name || '',
+          phone: a.phone,
+          transfer_number: a.transfer_number,
+          slot_from: a.slot_time,
+          slot_to: a.slot_to || ''
+        };
+      });
 
     return {
       branch_id: Number(branch.id),
@@ -796,7 +799,9 @@ app.get('/api/admin/appointments', auth(ROLE_VIEW_APPOINTMENTS), async (req, res
   const out = rows.map(a => {
     const b = data.branches.find(x => Number(x.id) === Number(a.branch_id)) || {};
     const c = data.remittance_companies.find(x => Number(x.id) === Number(a.company_id)) || {};
-    return { ...a, branch_name: b.name || '', branch_code: b.code || '', company_name: c.name || '' };
+    const otp = [...(data.otp_codes || [])].reverse().find(o => String(o.phone || '') === String(a.phone || '') && String(o.transfer_number || '') === String(a.transfer_number || '') && String(o.full_name || '').trim());
+    const full_name = a.full_name || otp?.full_name || '';
+    return { ...a, full_name, branch_name: b.name || '', branch_code: b.code || '', company_name: c.name || '' };
   }).sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
 
   res.json({ appointments: out });
