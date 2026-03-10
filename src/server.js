@@ -413,6 +413,8 @@ app.get('/api/business-days', async (req, res) => {
 
   const upcoming = [];
   let cursor = new Date();
+  // يبدأ الحجز من اليوم التالي (لا نعرض تاريخ اليوم)
+  cursor.setDate(cursor.getDate() + 1);
   for (let i = 0; i < 30 && upcoming.length < 14; i += 1) {
     const en = EN_DAYS[cursor.getDay()];
     const date = ymd(cursor);
@@ -570,6 +572,9 @@ app.post('/api/book', async (req, res) => {
 
   const holidaysSet = new Set((data.holidays || []).map(h => h.date));
   if (holidaysSet.has(booking_date)) return res.status(400).json({ success: false, message: 'هذا اليوم عطلة ولا يمكن الحجز فيه' });
+
+  const todayYmd = ymd(new Date());
+  if (booking_date <= todayYmd) return res.status(400).json({ success: false, message: 'الحجز يبدأ من اليوم التالي للتاريخ الحالي' });
 
   const cooldown = checkBookingCooldown(data, { phone, booking_date, branch_id });
   if (cooldown.blocked) {
