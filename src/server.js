@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
 const path = require('path');
 const { read, write, nextId, nowISO, seedIfNeeded, getCooldownData } = require('./store');
 
@@ -26,6 +27,13 @@ const OTP_MAX_PER_WINDOW = Number(process.env.OTP_MAX_PER_WINDOW || 5);
 const OTP_MAX_VERIFY_ATTEMPTS = Number(process.env.OTP_MAX_VERIFY_ATTEMPTS || 5);
 const OTP_LOCK_MINUTES = Number(process.env.OTP_LOCK_MINUTES || 30);
 const EMPLOYEE_PREFIX = (process.env.EMPLOYEE_PREFIX || 'BBSY0').toUpperCase();
+const REPORTS_DASHBOARD_URL = process.env.REPORTS_DASHBOARD_URL || '';
+const REPORT_ADMIN_EMAILS = String(process.env.REPORT_ADMIN_EMAILS || '').split(',').map(v => v.trim().toLowerCase()).filter(Boolean);
+const SMTP_HOST = process.env.SMTP_HOST || '';
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || '';
+const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || 'no-reply@albarakasyria.com';
 
 const ROLE_ADMIN_LIKE = ['admin'];
 const ROLE_VIEW_APPOINTMENTS = ['admin', 'manager', 'employee', 'branch_employee'];
@@ -208,6 +216,125 @@ function generateEmployeeNo(data) {
   return `${prefix}${String(max + 1).padStart(3, '0')}`;
 }
 
+function isValidEmail(email) {
+  if (!email) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
+}
+
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function reportRowsForDate(data, dateYmd, scopedBranchId = null) {
+  const reports = buildLiveReportsForDate(data, dateYmd, scopedBranchId);
+  const rows = [];
+  for (const r of reports) {
+    for (const p of (r.payload || [])) {
+      rows.push({
+        full_name: p.full_name || '-',
+        phone: p.phone || '-',
+        booking_date: r.report_date,
+        booking_time: `${p.slot_from || '-'} - ${p.slot_to || '-'}`,
+        branch_name: r.branch_name || '-'
+      });
+    }
+  }
+  return rows;
+}
+
+function buildExcelBuffer(rows) {
+  const header = ['الاسم', 'رقم الموبايل', 'تاريخ الحجز', 'وقت الحجز', 'اسم الفرع'];
+  const lines = [header.join('\t')];
+  for (const row of rows) {
+    lines.push([
+      row.full_name || '-',
+      row.phone || '-',
+      row.booking_date || '-',
+      row.booking_time || '-',
+      row.branch_name || '-'
+    ].join('\t'));
+  }
+  return Buffer.from(`\uFEFF${lines.join('\n')}`, 'utf8');
+}
+
+async function sendReportEmail({ to, dateYmd, rows, dashboardUrl }) {
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !to) return { ok: false, skipped: true };
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS }
+  });
+
+  const fileName = `daily_booking_report_${dateYmd}.xls`;
+  const html = `
+    <div dir="rtl" style="font-family:Arial,sans-serif">
+      <h3>تقرير الحجوزات اليومية - ${dateYmd}</h3>
+      <p>مرفق ملف Excel يتضمن التفاصيل التالية:</p>
+      <ul>
+        <li>الاسم</li>
+        <li>رقم الموبايل</li>
+        <li>تاريخ الحجز</li>
+        <li>وقت الحجز</li>
+        <li>اسم الفرع المحجوز به</li>
+      </ul>
+      <p>رابط صفحة التقارير في لوحة التحكم:</p>
+      <p><a href="${dashboardUrl}">${dashboardUrl}</a></p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: SMTP_FROM,
+    to,
+    subject: `تقرير حجوزات منصة الدور - ${dateYmd}`,
+    html,
+    attachments: [
+      {
+        filename: fileName,
+        content: buildExcelBuffer(rows),
+        contentType: 'application/vnd.ms-excel'
+      }
+    ]
+  });
+
+  return { ok: true };
+}
+
+async function sendDailyReportsEmailsIfNeeded(data, dateYmd = ymd(new Date())) {
+  const users = data.dashboard_users || [];
+  const allRecipients = new Set(REPORT_ADMIN_EMAILS);
+  for (const u of users) {
+    if (['admin', 'manager', 'branch_employee', 'employee'].includes(normalizeRole(u.role)) && u.report_email) {
+      allRecipients.add(normalizeEmail(u.report_email));
+    }
+  }
+
+  if (!allRecipients.size) return false;
+  data.report_email_logs = data.report_email_logs || [];
+  const dashboardUrl = REPORTS_DASHBOARD_URL || `http://localhost:${PORT}/admin/`;
+
+  let sentAny = false;
+  for (const email of allRecipients) {
+    const user = users.find(u => normalizeEmail(u.report_email) === email);
+    const role = user ? normalizeRole(user.role) : 'admin';
+    const scopedBranchId = (role === 'manager' || role === 'employee' || role === 'branch_employee') ? Number(user?.branch_id || 0) || null : null;
+    const dedupeKey = `${dateYmd}::${email}::${scopedBranchId || 'all'}`;
+    if (data.report_email_logs.some(x => x.key === dedupeKey)) continue;
+
+    const rows = reportRowsForDate(data, dateYmd, scopedBranchId);
+    if (!rows.length) continue;
+
+    try {
+      await sendReportEmail({ to: email, dateYmd, rows, dashboardUrl });
+      data.report_email_logs.push({ key: dedupeKey, email, date: dateYmd, branch_id: scopedBranchId, sent_at: nowISO() });
+      sentAny = true;
+    } catch (e) {
+      console.error('[REPORT_EMAIL_ERROR]', email, e.message || e);
+    }
+  }
+  return sentAny;
+}
+
 function getSec(data, phone) {
   data.otp_security = data.otp_security || [];
   let row = data.otp_security.find(x => x.phone === phone);
@@ -366,7 +493,10 @@ async function generateDailyReportsIfNeeded(dateYmd = ymd(new Date())) {
     changed = true;
   }
 
-  if (changed) await write(data);
+  if (changed) {
+    await sendDailyReportsEmailsIfNeeded(data, dateYmd);
+    await write(data);
+  }
   return changed;
 }
 
@@ -816,6 +946,7 @@ app.post('/api/admin/reports/daily/generate', auth(['admin']), async (req, res) 
     }
   }
 
+  await sendDailyReportsEmailsIfNeeded(data, date);
   await write(data);
   res.json({ ok: true, generated: true, date, count: rows.length });
 });
@@ -828,6 +959,7 @@ app.get('/api/admin/users', auth(['admin']), async (_req, res) => {
     employee_no: u.employee_no || '',
     role: normalizeRole(u.role),
     branch_id: u.branch_id || null,
+    report_email: u.report_email || '',
     active: Number(u.active || 0)
   })).sort((a, b) => Number(b.id) - Number(a.id));
   res.json({ users });
@@ -835,14 +967,16 @@ app.get('/api/admin/users', auth(['admin']), async (_req, res) => {
 
 app.post('/api/admin/users', auth(['admin']), async (req, res) => {
   const data = await read();
-  const { username, employee_no, role, branch_id, active } = req.body || {};
+  const { username, employee_no, role, branch_id, active, report_email } = req.body || {};
   const cleanUsername = String(username || '').trim();
   const cleanEmpNo = String(employee_no || '').trim();
   const cleanRole = normalizeRole(role);
+  const cleanReportEmail = normalizeEmail(report_email);
   if (!cleanUsername) return res.status(400).json({ error: 'username required' });
   if (!['admin', 'manager', 'employee'].includes(cleanRole)) return res.status(400).json({ error: 'role must be admin, manager, or employee' });
   if ((cleanRole === 'employee' || (cleanRole === 'manager' && MANAGER_SCOPED_TO_BRANCH)) && !Number(branch_id)) return res.status(400).json({ error: 'branch_id required for this role' });
   if (data.dashboard_users.some(u => u.username === cleanUsername)) return res.status(409).json({ error: 'username already exists' });
+  if (!isValidEmail(cleanReportEmail)) return res.status(400).json({ error: 'invalid report_email' });
   if (cleanEmpNo && !new RegExp(`^${EMPLOYEE_PREFIX}\\d+$`, 'i').test(cleanEmpNo)) return res.status(400).json({ error: `employee_no must start with ${EMPLOYEE_PREFIX}` });
 
   const employeeNo = (cleanEmpNo ? cleanEmpNo.toUpperCase() : generateEmployeeNo(data));
@@ -854,6 +988,7 @@ app.post('/api/admin/users', auth(['admin']), async (req, res) => {
     id: nextId(data, 'dashboard_users'),
     username: cleanUsername,
     employee_no: employeeNo,
+    report_email: cleanReportEmail || null,
     password_hash: bcrypt.hashSync(passwordPlain, 10),
     role: cleanRole,
     branch_id: (cleanRole === 'employee' || (cleanRole === 'manager' && MANAGER_SCOPED_TO_BRANCH)) ? Number(branch_id || 0) || null : null,
@@ -868,7 +1003,7 @@ app.put('/api/admin/users/:id', auth(['admin']), async (req, res) => {
   const data = await read();
   const row = data.dashboard_users.find(u => Number(u.id) === Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Not found' });
-  const { role, branch_id, active, reset_password } = req.body || {};
+  const { role, branch_id, active, reset_password, report_email } = req.body || {};
 
   const nextRole = role !== undefined ? normalizeRole(role) : normalizeRole(row.role);
   if (role !== undefined) {
@@ -880,6 +1015,11 @@ app.put('/api/admin/users/:id', auth(['admin']), async (req, res) => {
     return res.status(400).json({ error: 'branch_id required for this role' });
   }
   if (active !== undefined) row.active = Number(active ? 1 : 0);
+  if (report_email !== undefined) {
+    const cleanReportEmail = normalizeEmail(report_email);
+    if (!isValidEmail(cleanReportEmail)) return res.status(400).json({ error: 'invalid report_email' });
+    row.report_email = cleanReportEmail || null;
+  }
 
   let newPassword = null;
   if (reset_password) {

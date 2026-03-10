@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS dashboard_users (
   username VARCHAR(80) NOT NULL UNIQUE,
   employee_no VARCHAR(20) NULL UNIQUE,
   full_name VARCHAR(160) NULL,
+  report_email VARCHAR(190) NULL,
   password_hash VARCHAR(255) NOT NULL,
   role VARCHAR(40) NOT NULL,
   branch_id INT NULL,
@@ -85,4 +86,14 @@ CREATE TABLE IF NOT EXISTS daily_reports (
   created_at DATETIME NULL,
   UNIQUE KEY uniq_report_date_branch (report_date, branch_id),
   INDEX idx_report_date (report_date)
+);
+
+CREATE TABLE IF NOT EXISTS report_email_logs (
+  id INT PRIMARY KEY,
+  dedupe_key VARCHAR(255) NOT NULL UNIQUE,
+  email VARCHAR(190) NOT NULL,
+  report_date DATE NOT NULL,
+  branch_id INT NULL,
+  sent_at DATETIME NULL,
+  INDEX idx_report_email_date (report_date)
 );

@@ -57,6 +57,24 @@ STORAGE_DRIVER=mysql
 STORAGE_DRIVER=json
 ```
 
+## التقارير اليومية عبر الإيميل
+- يتم إرسال تقرير يومي Excel تلقائيًا عند التوليد إلى:
+  - عناوين `REPORT_ADMIN_EMAILS`
+  - وإيميلات المستخدمين في لوحة التحكم (حقل **إيميل التقارير** عند إضافة/تعديل المستخدم)
+- تفاصيل الملف المرسل: الاسم، رقم الموبايل، تاريخ الحجز، وقت الحجز، اسم الفرع.
+- يحتوي الإيميل أيضًا على رابط صفحة التقارير: `REPORTS_DASHBOARD_URL`.
+
+المتغيرات المطلوبة في `.env`:
+```env
+REPORTS_DASHBOARD_URL=http://dit-83-555:8090/admin/
+REPORT_ADMIN_EMAILS=M.Joha@albarakasyria.com
+SMTP_HOST=smtp.hostinger.com
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASS=...
+SMTP_FROM=no-reply@albarakasyria.com
+```
+
 ## ملاحظات
 - تم الاستغناء عن `better-sqlite3` لضمان العمل على بيئات Python 3.6 بدون build native.
 - التخزين الحالي JSON file-based في `data.json`.

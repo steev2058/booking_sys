@@ -10,7 +10,7 @@ function nowISO() {
 
 function defaultData() {
   return {
-    counters: { branches: 1, remittance_companies: 1, business_days: 1, appointments: 1, dashboard_users: 1, otp_codes: 1, daily_reports: 1 },
+    counters: { branches: 1, remittance_companies: 1, business_days: 1, appointments: 1, dashboard_users: 1, otp_codes: 1, daily_reports: 1, report_email_logs: 1 },
     branches: [],
     remittance_companies: [],
     business_days: [],
@@ -18,7 +18,8 @@ function defaultData() {
     dashboard_users: [],
     otp_codes: [],
     otp_security: [],
-    daily_reports: []
+    daily_reports: [],
+    report_email_logs: []
   };
 }
 
@@ -80,6 +81,7 @@ function seedIfNeeded() {
       employee_no: 'BBSY0000',
       full_name: 'System Admin',
       password_hash: bcrypt.hashSync('admin1234', 10),
+      report_email: process.env.DEFAULT_ADMIN_REPORT_EMAIL || '',
       role: 'admin',
       branch_id: null,
       active: 1

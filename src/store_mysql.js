@@ -20,7 +20,7 @@ async function q(sql, values = []) {
   return pool.query({ sql, values, timeout: Number(process.env.DB_QUERY_TIMEOUT_MS || 7000) });
 }
 
-const TABLE_KEYS = ['branches', 'remittance_companies', 'business_days', 'appointments', 'dashboard_users', 'otp_codes', 'daily_reports'];
+const TABLE_KEYS = ['branches', 'remittance_companies', 'business_days', 'appointments', 'dashboard_users', 'otp_codes', 'daily_reports', 'report_email_logs'];
 
 function normalizeDate(v) {
   if (!v) return null;
@@ -38,6 +38,7 @@ async function read() {
   const [otpCodes] = await pool.query('SELECT * FROM otp_codes');
   const [otpSecurity] = await pool.query('SELECT * FROM otp_security');
   const [dailyReports] = await pool.query('SELECT * FROM daily_reports');
+  const [reportEmailLogs] = await pool.query('SELECT * FROM report_email_logs');
 
   const data = {
     branches,
@@ -47,7 +48,8 @@ async function read() {
     dashboard_users: users,
     otp_codes: otpCodes.map(r => ({ ...r, expires_at: normalizeDate(r.expires_at), created_at: normalizeDate(r.created_at) })),
     otp_security: otpSecurity.map(r => ({ ...r, window_start: normalizeDate(r.window_start), locked_until: normalizeDate(r.locked_until) })),
-    daily_reports: dailyReports.map(r => ({ ...r, report_date: normalizeDate(r.report_date)?.slice(0,10), created_at: normalizeDate(r.created_at), payload: r.payload_json ? JSON.parse(r.payload_json) : [] }))
+    daily_reports: dailyReports.map(r => ({ ...r, report_date: normalizeDate(r.report_date)?.slice(0,10), created_at: normalizeDate(r.created_at), payload: r.payload_json ? JSON.parse(r.payload_json) : [] })),
+    report_email_logs: reportEmailLogs.map(r => ({ id: r.id, key: r.dedupe_key, email: r.email, date: normalizeDate(r.report_date)?.slice(0,10), branch_id: r.branch_id, sent_at: normalizeDate(r.sent_at) }))
   };
 
   data.counters = {};
@@ -78,6 +80,7 @@ async function write(data) {
     await conn.query('DELETE FROM otp_codes');
     await conn.query('DELETE FROM otp_security');
     await conn.query('DELETE FROM daily_reports');
+    await conn.query('DELETE FROM report_email_logs');
     await conn.query('DELETE FROM remittance_companies');
 
     for (const r of data.branches || []) {
@@ -93,7 +96,7 @@ async function write(data) {
       await conn.query('INSERT INTO appointments (id, transfer_number, branch_id, company_id, day_name, booking_date, slot_time, slot_to, phone, full_name, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [r.id, r.transfer_number, r.branch_id, r.company_id, r.day_name, r.booking_date || null, r.slot_time, r.slot_to || null, r.phone, r.full_name || null, r.status || 'booked', toMysqlDate(r.created_at)]);
     }
     for (const r of data.dashboard_users || []) {
-      await conn.query('INSERT INTO dashboard_users (id, username, employee_no, full_name, password_hash, role, branch_id, active) VALUES (?,?,?,?,?,?,?,?)', [r.id, r.username, r.employee_no || null, r.full_name || null, r.password_hash, r.role, r.branch_id || null, Number(r.active || 0)]);
+      await conn.query('INSERT INTO dashboard_users (id, username, employee_no, full_name, report_email, password_hash, role, branch_id, active) VALUES (?,?,?,?,?,?,?,?,?)', [r.id, r.username, r.employee_no || null, r.full_name || null, r.report_email || null, r.password_hash, r.role, r.branch_id || null, Number(r.active || 0)]);
     }
     for (const r of data.otp_codes || []) {
       await conn.query('INSERT INTO otp_codes (id, phone, full_name, code, transfer_number, expires_at, used, created_at) VALUES (?,?,?,?,?,?,?,?)', [r.id, r.phone, r.full_name || null, r.code, r.transfer_number, toMysqlDate(r.expires_at), Number(r.used || 0), toMysqlDate(r.created_at)]);
@@ -103,6 +106,9 @@ async function write(data) {
     }
     for (const r of data.daily_reports || []) {
       await conn.query('INSERT INTO daily_reports (id, report_date, branch_id, total_booked, payload_json, created_at) VALUES (?,?,?,?,?,?)', [r.id, r.report_date, Number(r.branch_id), Number(r.total_booked || 0), JSON.stringify(r.payload || []), toMysqlDate(r.created_at)]);
+    }
+    for (const r of data.report_email_logs || []) {
+      await conn.query('INSERT INTO report_email_logs (id, dedupe_key, email, report_date, branch_id, sent_at) VALUES (?,?,?,?,?,?)', [r.id, r.key, r.email, r.date, r.branch_id || null, toMysqlDate(r.sent_at)]);
     }
 
     await conn.commit();
@@ -159,6 +165,7 @@ async function seedIfNeeded() {
       employee_no: 'BBSY0000',
       full_name: 'System Admin',
       password_hash: bcrypt.hashSync('admin1234', 10),
+      report_email: process.env.DEFAULT_ADMIN_REPORT_EMAIL || '',
       role: 'admin',
       branch_id: null,
       active: 1
