@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS daily_reports (
 
 CREATE TABLE IF NOT EXISTS report_email_logs (
   id INT PRIMARY KEY,
-  dedupe_key VARCHAR(255) NOT NULL UNIQUE,
+  dedupe_key VARCHAR(191) NOT NULL UNIQUE,
   email VARCHAR(190) NOT NULL,
   report_date DATE NOT NULL,
   branch_id INT NULL,

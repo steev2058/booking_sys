@@ -4,6 +4,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 const path = require('path');
 const { read, write, nextId, nowISO, seedIfNeeded, getCooldownData } = require('./store');
 
@@ -318,7 +319,8 @@ async function sendDailyReportsEmailsIfNeeded(data, dateYmd = ymd(new Date())) {
     const user = users.find(u => normalizeEmail(u.report_email) === email);
     const role = user ? normalizeRole(user.role) : 'admin';
     const scopedBranchId = (role === 'manager' || role === 'employee' || role === 'branch_employee') ? Number(user?.branch_id || 0) || null : null;
-    const dedupeKey = `${dateYmd}::${email}::${scopedBranchId || 'all'}`;
+    const dedupeRaw = `${dateYmd}::${email}::${scopedBranchId || 'all'}`;
+    const dedupeKey = crypto.createHash('sha1').update(dedupeRaw).digest('hex');
     if (data.report_email_logs.some(x => x.key === dedupeKey)) continue;
 
     const rows = reportRowsForDate(data, dateYmd, scopedBranchId);
