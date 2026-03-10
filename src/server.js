@@ -751,6 +751,7 @@ app.post('/api/book', async (req, res) => {
     slot_time,
     slot_to: calcSlotEnd(slot_time, Number(dayCfg.interval_minutes || 30)),
     phone,
+    full_name: cleanName,
     status: 'booked',
     created_at: nowISO()
   });
