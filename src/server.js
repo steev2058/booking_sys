@@ -244,18 +244,38 @@ function reportRowsForDate(data, dateYmd, scopedBranchId = null) {
 }
 
 function buildExcelBuffer(rows) {
-  const header = ['الاسم', 'رقم الموبايل', 'تاريخ الحجز', 'وقت الحجز', 'اسم الفرع'];
-  const lines = [header.join('\t')];
-  for (const row of rows) {
-    lines.push([
-      row.full_name || '-',
-      row.phone || '-',
-      row.booking_date || '-',
-      row.booking_time || '-',
-      row.branch_name || '-'
-    ].join('\t'));
-  }
-  return Buffer.from(`\uFEFF${lines.join('\n')}`, 'utf8');
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  const trs = rows.map((row) => `
+    <tr>
+      <td>${esc(row.full_name || '-')}</td>
+      <td style="mso-number-format:'\\@'">${esc(row.phone || '-')}</td>
+      <td>${esc(row.booking_date || '-')}</td>
+      <td>${esc(row.booking_time || '-')}</td>
+      <td>${esc(row.branch_name || '-')}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <html>
+      <head><meta charset="UTF-8" /></head>
+      <body dir="rtl">
+        <table border="1" cellspacing="0" cellpadding="6">
+          <thead>
+            <tr>
+              <th>الاسم</th>
+              <th>رقم الموبايل</th>
+              <th>تاريخ الحجز</th>
+              <th>وقت الحجز</th>
+              <th>اسم الفرع</th>
+            </tr>
+          </thead>
+          <tbody>${trs}</tbody>
+        </table>
+      </body>
+    </html>
+  `;
+
+  return Buffer.from(html, 'utf8');
 }
 
 async function sendReportEmail({ to, dateYmd, rows, dashboardUrl }) {
