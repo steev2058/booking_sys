@@ -92,7 +92,7 @@
         <div class="grid">
           <div><label>شركة الحوالات</label><select id="company"></select></div>
           <div><label>رقم الحوالة</label><input id="transfer" style="direction:ltr;text-align:left"></div>
-          <div><label>رقم الهاتف</label><input id="phone" value="09" maxlength="10" inputmode="numeric" pattern="09[0-9]{8}" style="direction:ltr;text-align:left"></div>
+          <div><label>رقم الموبايل</label><input id="phone" value="09" maxlength="10" inputmode="numeric" pattern="09[0-9]{8}" style="direction:ltr;text-align:left"></div>
           <div><label>الاسم الثلاثي</label><input id="full_name" placeholder="الاسم الثلاثي"></div>
           <div><label>الفرع</label><select id="branch"></select></div>
         </div>
@@ -200,7 +200,7 @@ function setBookingEnabled(enabled){
     clearMsg();
   }
 }
-function nextStep(n){if(!bookingEnabled){showToast('الحجز متوقف حالياً لعدم توفر شركات حوالات',false);return;}const transferVal=String(document.getElementById('transfer').value||'').trim();const phoneVal=String(document.getElementById('phone').value||'').trim();const fullNameVal=String(document.getElementById('full_name').value||'').trim();if(n===2&&(!transferVal||!phoneVal||!fullNameVal)){msg.style.color='#b00020';msg.textContent='يرجى تعبئة رقم الحوالة والهاتف والاسم الثلاثي';showToast('يرجى تعبئة رقم الحوالة والهاتف والاسم الثلاثي',false);return;}if(n===2&&!/^09\d{8}$/.test(phoneVal)){msg.style.color='#b00020';msg.textContent='رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام';showToast('رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام',false);return;}if(n===2&&!isValidName(fullNameVal)){msg.style.color='#b00020';msg.textContent='الاسم يجب أن يحتوي محارف فقط بدون أرقام';showToast('الاسم يجب أن يحتوي محارف فقط بدون أرقام',false);return;}if(n===3&&!selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';showToast('الرجاء اختيار وقت متاح',false);return;}clearMsg();step=n;setStep();}
+function nextStep(n){if(!bookingEnabled){showToast('الحجز متوقف حالياً لعدم توفر شركات حوالات',false);return;}const transferVal=String(document.getElementById('transfer').value||'').trim();const phoneVal=String(document.getElementById('phone').value||'').trim();const fullNameVal=String(document.getElementById('full_name').value||'').trim();if(n===2&&(!transferVal||!phoneVal||!fullNameVal)){msg.style.color='#b00020';msg.textContent='يرجى تعبئة رقم الحوالة والموبايل والاسم الثلاثي';showToast('يرجى تعبئة رقم الحوالة والموبايل والاسم الثلاثي',false);return;}if(n===2&&!/^09\d{8}$/.test(phoneVal)){msg.style.color='#b00020';msg.textContent='رقم الموبايل يجب أن يبدأ بـ 09 ويتكون من 10 أرقام';showToast('رقم الموبايل يجب أن يبدأ بـ 09 ويتكون من 10 أرقام',false);return;}if(n===2&&!isValidName(fullNameVal)){msg.style.color='#b00020';msg.textContent='الاسم يجب أن يحتوي محارف فقط بدون أرقام';showToast('الاسم يجب أن يحتوي محارف فقط بدون أرقام',false);return;}if(n===3&&!selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';showToast('الرجاء اختيار وقت متاح',false);return;}clearMsg();step=n;setStep();}
 let loadCount=0;
 function setLoading(on){
   loadCount=Math.max(0, loadCount + (on?1:-1));
@@ -277,7 +277,7 @@ async function verifyCaptchaAndSendOtp(){
   const phoneVal=String(document.getElementById('phone').value||'').trim();
   const transferVal=String(document.getElementById('transfer').value||'').trim();
   const fullNameVal=String(document.getElementById('full_name').value||'').trim();
-  if(!/^09\d{8}$/.test(phoneVal)){showToast('رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام',false);msg.style.color='#b00020';msg.textContent='رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام';return;}
+  if(!/^09\d{8}$/.test(phoneVal)){showToast('رقم الموبايل يجب أن يبدأ بـ 09 ويتكون من 10 أرقام',false);msg.style.color='#b00020';msg.textContent='رقم الموبايل يجب أن يبدأ بـ 09 ويتكون من 10 أرقام';return;}
   if(!isValidName(fullNameVal)){showToast('الاسم يجب أن يحتوي محارف فقط بدون أرقام',false);msg.style.color='#b00020';msg.textContent='الاسم يجب أن يحتوي محارف فقط بدون أرقام';return;}
   const btn=verifyActionBtn||window.verifyBtn;
   if(btn) btn.disabled=true;
@@ -337,7 +337,7 @@ function resetBookingForm(){
 function showSuccessView(payload={}){
   const branchName=branch.options[branch.selectedIndex]?.textContent||'';
   const companyName=company.options[company.selectedIndex]?.textContent||'';
-  const details=`الفرع: ${branchName}<br>شركة الحوالات: ${companyName}<br>رقم الحوالة: ${transfer.value}<br>الهاتف: ${phone.value}<br>التاريخ: ${selectedDate||'-'}<br>الوقت: ${selectedSlot||'-'}`;
+  const details=`الفرع: ${branchName}<br>شركة الحوالات: ${companyName}<br>رقم الحوالة: ${transfer.value}<br>رقم الموبايل: ${phone.value}<br>التاريخ: ${selectedDate||'-'}<br>الوقت: ${selectedSlot||'-'}`;
   successDetails.innerHTML=details;
   document.querySelector('.card').style.display='none';
   successView.style.display='block';
