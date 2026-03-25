@@ -20,7 +20,7 @@ async function q(sql, values = []) {
   return pool.query({ sql, values, timeout: Number(process.env.DB_QUERY_TIMEOUT_MS || 7000) });
 }
 
-const TABLE_KEYS = ['branches', 'remittance_companies', 'business_days', 'appointments', 'dashboard_users', 'otp_codes', 'daily_reports', 'report_email_logs'];
+const TABLE_KEYS = ['branches', 'remittance_companies', 'business_days', 'holidays', 'appointments', 'dashboard_users', 'otp_codes', 'daily_reports', 'report_email_logs'];
 
 function normalizeDate(v) {
   if (!v) return null;
@@ -33,6 +33,7 @@ async function read() {
   const [branches] = await pool.query('SELECT * FROM branches');
   const [companies] = await pool.query('SELECT * FROM remittance_companies');
   const [days] = await pool.query('SELECT * FROM business_days');
+  const [holidays] = await pool.query('SELECT * FROM holidays');
   const [appointments] = await pool.query('SELECT * FROM appointments');
   const [users] = await pool.query('SELECT * FROM dashboard_users');
   const [otpCodes] = await pool.query('SELECT * FROM otp_codes');
@@ -44,6 +45,7 @@ async function read() {
     branches,
     remittance_companies: companies,
     business_days: days,
+    holidays: holidays.map(r => ({ ...r, date: normalizeDate(r.date)?.slice(0,10) })),
     appointments: appointments.map(r => ({ ...r, created_at: normalizeDate(r.created_at) })),
     dashboard_users: users,
     otp_codes: otpCodes.map(r => ({ ...r, expires_at: normalizeDate(r.expires_at), created_at: normalizeDate(r.created_at) })),
@@ -75,6 +77,7 @@ async function write(data) {
 
     await conn.query('DELETE FROM appointments');
     await conn.query('DELETE FROM business_days');
+    await conn.query('DELETE FROM holidays');
     await conn.query('DELETE FROM branches');
     await conn.query('DELETE FROM dashboard_users');
     await conn.query('DELETE FROM otp_codes');
@@ -91,6 +94,9 @@ async function write(data) {
     }
     for (const r of data.business_days || []) {
       await conn.query('INSERT INTO business_days (id, branch_id, day_name, start_time, end_time, interval_minutes, active) VALUES (?,?,?,?,?,?,?)', [r.id, r.branch_id, r.day_name, r.start_time, r.end_time, Number(r.interval_minutes || 60), Number(r.active || 0)]);
+    }
+    for (const r of data.holidays || []) {
+      await conn.query('INSERT INTO holidays (id, date, name, active) VALUES (?,?,?,?)', [r.id, r.date, r.name || null, Number(r.active ?? 1)]);
     }
     for (const r of data.appointments || []) {
       await conn.query('INSERT INTO appointments (id, transfer_number, branch_id, company_id, day_name, booking_date, slot_time, slot_to, phone, full_name, status, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', [r.id, r.transfer_number, r.branch_id, r.company_id, r.day_name, r.booking_date || null, r.slot_time, r.slot_to || null, r.phone, r.full_name || null, r.status || 'booked', toMysqlDate(r.created_at)]);
@@ -199,10 +205,11 @@ async function getCooldownData() {
   try {
     const [appointments] = await conn.query({ sql: 'SELECT phone, booking_date, status FROM appointments', timeout: Number(process.env.DB_QUERY_TIMEOUT_MS || 7000) });
     const [days] = await conn.query({ sql: 'SELECT branch_id, day_name, active FROM business_days', timeout: Number(process.env.DB_QUERY_TIMEOUT_MS || 7000) });
+    const [holidays] = await conn.query({ sql: 'SELECT date, active FROM holidays', timeout: Number(process.env.DB_QUERY_TIMEOUT_MS || 7000) });
     return {
       appointments,
       business_days: days,
-      holidays: []
+      holidays
     };
   } finally {
     try { await conn.end(); } catch {}

@@ -108,7 +108,7 @@ function addWorkingDays(startDateYmd, daysToAdd, allowedDayNames, holidaysSet = 
 }
 
 function checkBookingCooldown(data, { phone, booking_date, branch_id }) {
-  const holidaysSet = new Set((data.holidays || []).map(h => h.date));
+  const holidaysSet = new Set((data.holidays || []).filter(h => Number(h.active ?? 1) === 1).map(h => h.date));
   const allowedDayNames = data.business_days
     .filter(d => Number(d.branch_id) === Number(branch_id) && Number(d.active) === 1)
     .map(d => d.day_name);
@@ -191,6 +191,10 @@ function isValidPhone(phone) {
 
 function isValidFullName(name) {
   return /^[A-Za-z\u0600-\u06FF\s]{3,}$/.test(String(name || '').trim());
+}
+
+function isValidTransferNumber(v) {
+  return /^[A-Za-z0-9]+$/.test(String(v || '').trim());
 }
 
 function normalizeRole(role) {
@@ -488,7 +492,7 @@ async function generateDailyReportsIfNeeded(dateYmd = ymd(new Date())) {
   const data = await read();
   let changed = false;
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-  const holidaysSet = new Set((data.holidays || []).map(h => h.date));
+  const holidaysSet = new Set((data.holidays || []).filter(h => Number(h.active ?? 1) === 1).map(h => h.date));
   if (holidaysSet.has(dateYmd)) return false;
 
   const dayName = EN_DAYS[fromYmd(dateYmd).getDay()];
@@ -564,7 +568,7 @@ app.get('/api/business-days', async (req, res) => {
 
   const rows = data.business_days.filter(d => Number(d.branch_id) === branchId && Number(d.active) === 1);
   const allowed = rows.map(r => r.day_name);
-  const holidaysSet = new Set((data.holidays || []).map(h => h.date));
+  const holidaysSet = new Set((data.holidays || []).filter(h => Number(h.active ?? 1) === 1).map(h => h.date));
 
   const upcoming = [];
   let cursor = new Date();
@@ -671,6 +675,7 @@ app.post('/api/send-otp', async (req, res) => {
   const { phone, full_name, transfer_number, captcha_answer, captcha_token } = req.body || {};
   if (!phone || !full_name || !transfer_number || !captcha_answer || !captcha_token) return res.status(400).json({ error: 'Missing fields' });
   if (!isValidPhone(phone)) return res.status(400).json({ error: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
+  if (!isValidTransferNumber(transfer_number)) return res.status(400).json({ error: 'رقم الحوالة يجب أن يحتوي أحرف وأرقام إنكليزية فقط' });
   if (!isValidFullName(full_name)) return res.status(400).json({ error: 'الاسم يجب أن يحتوي على محارف فقط بدون أرقام' });
 
   const data = await read();
@@ -705,6 +710,7 @@ app.post('/api/book', async (req, res) => {
   const { transfer_number, branch_id, company_id, booking_date, slot_time, phone, full_name, otp_code } = req.body || {};
   if (!transfer_number || !branch_id || !company_id || !booking_date || !slot_time || !phone || !full_name || !otp_code) return res.status(400).json({ error: 'Missing required fields' });
   if (!isValidPhone(phone)) return res.status(400).json({ success: false, message: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
+  if (!isValidTransferNumber(transfer_number)) return res.status(400).json({ success: false, message: 'رقم الحوالة يجب أن يحتوي أحرف وأرقام إنكليزية فقط' });
   if (!isValidFullName(full_name)) return res.status(400).json({ success: false, message: 'الاسم يجب أن يحتوي على محارف فقط بدون أرقام' });
 
   const data = await read();
@@ -725,7 +731,7 @@ app.post('/api/book', async (req, res) => {
   const dayCfg = data.business_days.find(d => Number(d.branch_id) === Number(branch_id) && d.day_name === dayName && Number(d.active) === 1);
   if (!dayCfg) return res.status(400).json({ success: false, message: 'اليوم غير متاح للحجز' });
 
-  const holidaysSet = new Set((data.holidays || []).map(h => h.date));
+  const holidaysSet = new Set((data.holidays || []).filter(h => Number(h.active ?? 1) === 1).map(h => h.date));
   if (holidaysSet.has(booking_date)) return res.status(400).json({ success: false, message: 'هذا اليوم عطلة ولا يمكن الحجز فيه' });
 
   const todayYmd = ymd(new Date());
@@ -938,6 +944,51 @@ app.delete('/api/admin/business-days/:id', auth(ROLE_DAY_MANAGE), async (req, re
   if (!row) return res.status(404).json({ error: 'Not found' });
   if ((req.user.role === 'branch_employee' || (req.user.role === 'manager' && MANAGER_SCOPED_TO_BRANCH)) && Number(row.branch_id) !== Number(req.user.branch_id)) return res.status(403).json({ error: 'Forbidden for other branch' });
   data.business_days = data.business_days.filter(d => Number(d.id) !== Number(req.params.id));
+  await write(data);
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/holidays', auth(['admin', 'manager']), async (_req, res) => {
+  const data = await read();
+  const rows = (data.holidays || []).sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+  res.json({ holidays: rows });
+});
+
+app.post('/api/admin/holidays', auth(['admin']), async (req, res) => {
+  const data = await read();
+  data.holidays = data.holidays || [];
+  const date = String((req.body || {}).date || '').trim();
+  const name = String((req.body || {}).name || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+  if (data.holidays.some(h => String(h.date) === date)) return res.status(409).json({ error: 'holiday already exists' });
+  data.holidays.push({ id: nextId(data, 'holidays'), date, name: name || null, active: 1 });
+  await write(data);
+  res.json({ ok: true });
+});
+
+app.put('/api/admin/holidays/:id', auth(['admin']), async (req, res) => {
+  const data = await read();
+  data.holidays = data.holidays || [];
+  const row = data.holidays.find(h => Number(h.id) === Number(req.params.id));
+  if (!row) return res.status(404).json({ error: 'Not found' });
+  const date = String((req.body || {}).date || row.date || '').trim();
+  const name = String((req.body || {}).name || row.name || '').trim();
+  const active = Number((req.body || {}).active ?? row.active ?? 1) ? 1 : 0;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+  if (data.holidays.some(h => Number(h.id)!==Number(row.id) && String(h.date) === date)) return res.status(409).json({ error: 'holiday date already exists' });
+  row.date = date;
+  row.name = name || null;
+  row.active = active;
+  await write(data);
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/holidays/:id', auth(['admin']), async (req, res) => {
+  const data = await read();
+  data.holidays = data.holidays || [];
+  const exists = data.holidays.some(h => Number(h.id) === Number(req.params.id));
+  if (!exists) return res.status(404).json({ error: 'Not found' });
+  data.holidays = data.holidays.filter(h => Number(h.id) !== Number(req.params.id));
   await write(data);
   res.json({ ok: true });
 });

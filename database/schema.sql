@@ -27,6 +27,14 @@ CREATE TABLE IF NOT EXISTS business_days (
   INDEX idx_business_days_branch (branch_id)
 );
 
+CREATE TABLE IF NOT EXISTS holidays (
+  id INT PRIMARY KEY,
+  date DATE NOT NULL UNIQUE,
+  name VARCHAR(190) NULL,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  INDEX idx_holidays_date (date)
+);
+
 CREATE TABLE IF NOT EXISTS appointments (
   id INT PRIMARY KEY,
   transfer_number VARCHAR(80) NOT NULL,
