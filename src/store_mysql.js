@@ -29,6 +29,18 @@ function normalizeDate(v) {
   return String(v);
 }
 
+function normalizeYmd(v) {
+  if (!v) return null;
+  if (typeof v === 'string') return v.slice(0, 10);
+  if (v instanceof Date) {
+    const y = v.getUTCFullYear();
+    const m = String(v.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(v.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return String(v).slice(0, 10);
+}
+
 async function read() {
   const [branches] = await pool.query('SELECT * FROM branches');
   const [companies] = await pool.query('SELECT * FROM remittance_companies');
@@ -45,13 +57,13 @@ async function read() {
     branches,
     remittance_companies: companies,
     business_days: days,
-    holidays: holidays.map(r => ({ ...r, date: normalizeDate(r.date)?.slice(0,10) })),
+    holidays: holidays.map(r => ({ ...r, date: normalizeYmd(r.date) })),
     appointments: appointments.map(r => ({ ...r, created_at: normalizeDate(r.created_at) })),
     dashboard_users: users,
     otp_codes: otpCodes.map(r => ({ ...r, expires_at: normalizeDate(r.expires_at), created_at: normalizeDate(r.created_at) })),
     otp_security: otpSecurity.map(r => ({ ...r, window_start: normalizeDate(r.window_start), locked_until: normalizeDate(r.locked_until) })),
-    daily_reports: dailyReports.map(r => ({ ...r, report_date: normalizeDate(r.report_date)?.slice(0,10), created_at: normalizeDate(r.created_at), payload: r.payload_json ? JSON.parse(r.payload_json) : [] })),
-    report_email_logs: reportEmailLogs.map(r => ({ id: r.id, key: r.dedupe_key, email: r.email, date: normalizeDate(r.report_date)?.slice(0,10), branch_id: r.branch_id, sent_at: normalizeDate(r.sent_at) }))
+    daily_reports: dailyReports.map(r => ({ ...r, report_date: normalizeYmd(r.report_date), created_at: normalizeDate(r.created_at), payload: r.payload_json ? JSON.parse(r.payload_json) : [] })),
+    report_email_logs: reportEmailLogs.map(r => ({ id: r.id, key: r.dedupe_key, email: r.email, date: normalizeYmd(r.report_date), branch_id: r.branch_id, sent_at: normalizeDate(r.sent_at) }))
   };
 
   data.counters = {};
