@@ -567,25 +567,28 @@ app.get('/api/business-days', async (req, res) => {
   await write(data);
 
   const rows = data.business_days.filter(d => Number(d.branch_id) === branchId && Number(d.active) === 1);
-  const allowed = rows.map(r => r.day_name);
-  const holidaysSet = new Set((data.holidays || []).filter(h => Number(h.active ?? 1) === 1).map(h => h.date));
+  const holidays = (data.holidays || []).filter(h => Number(h.active ?? 1) === 1);
+  const holidaysSet = new Set(holidays.map(h => h.date));
 
   const upcoming = [];
   let cursor = new Date();
   // يبدأ الحجز من اليوم التالي (لا نعرض تاريخ اليوم)
   cursor.setDate(cursor.getDate() + 1);
-  for (let i = 0; i < 30 && upcoming.length < 14; i += 1) {
+  for (let i = 0; i < 45 && upcoming.length < 14; i += 1) {
     const en = EN_DAYS[cursor.getDay()];
     const date = ymd(cursor);
     const cfg = rows.find(r => r.day_name === en);
-    if (cfg && !holidaysSet.has(date)) {
+    if (cfg) {
+      const holiday = holidays.find(h => String(h.date) === date);
       upcoming.push({
         date,
         day_name: en,
         day_name_ar: AR_DAYS[en] || en,
         start_time: cfg.start_time,
         end_time: cfg.end_time,
-        interval_minutes: Number(cfg.interval_minutes || 30)
+        interval_minutes: Number(cfg.interval_minutes || 30),
+        is_holiday: Boolean(holiday),
+        holiday_name: holiday?.name || ''
       });
     }
     cursor.setDate(cursor.getDate() + 1);

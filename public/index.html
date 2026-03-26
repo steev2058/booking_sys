@@ -35,6 +35,8 @@
     .day-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
     .chip{padding:9px 14px;border:2px solid #b0bec5;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;color:#546e7a}
     .chip.active{background:var(--gray);border-color:var(--gray);color:#fff}
+    .chip.holiday{background:#fff3e0;border-color:#ffb74d;color:#bf360c;cursor:not-allowed}
+    .chip.holiday.active{background:#ffe0b2;border-color:#ff9800;color:#bf360c}
 
     .slots{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:10px;margin-top:10px}
     .slot{padding:13px;border-radius:12px;border:2px solid #cfd8dc;background:#fff;cursor:pointer;font-weight:800;display:flex;justify-content:space-between}
@@ -246,8 +248,41 @@ async function refreshCaptcha(forceCloseOtp=false){
   if(rb) rb.disabled=false;
 }
 async function init(){phone.value='09';const b=await j('/api/branches',{},true);branch.innerHTML=b.branches.map(x=>`<option value="${x.id}">${x.name} - ${x.location}</option>`).join('');const c=await j('/api/companies',{},true);const companies=(c.companies||[]);company.innerHTML=companies.map(x=>`<option value="${x.id}">${x.name}${x.description?` - ${x.description}`:''}</option>`).join('');if(!companies.length){setBookingEnabled(false);return;}setBookingEnabled(true);await refreshCaptcha();setTimeout(()=>{if(captchaImg && captchaImg.style.display==='none') refreshCaptcha();},350);await loadDays();}
-async function loadDays(){const d=await j('/api/business-days?branch_id='+branch.value,{},true);daysConfig=d.days||[];selectedDate='';days.innerHTML=daysConfig.map((x,i)=>`<div class="chip ${i===0?'active':''}" data-date="${x.date}">${x.day_name_ar} (${x.date})</div>`).join('');if(daysConfig[0])selectedDate=daysConfig[0].date;document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');selectedDate=el.dataset.date;loadSlots();});await loadSlots();}
-async function loadSlots(){selectedSlot='';if(!selectedDate){slots.innerHTML='';return;}const s=await j(`/api/slots?branch_id=${branch.value}&booking_date=${encodeURIComponent(selectedDate)}`,{},true);slots.innerHTML=(s.slots||[]).map(x=>`<div class="slot ${x.available?'':'na'}" data-time="${x.time}"><span>⏱</span><span>${x.time} - ${x.to_time}${x.available?'':` (ممتلئة)`}</span></div>`).join('');document.querySelectorAll('.slot:not(.na)').forEach(el=>el.onclick=()=>{document.querySelectorAll('.slot').forEach(a=>a.classList.remove('sel'));el.classList.add('sel');selectedSlot=el.dataset.time;});}
+async function loadDays(){
+  const d=await j('/api/business-days?branch_id='+branch.value,{},true);
+  daysConfig=d.days||[];
+  selectedDate='';
+  const firstAvailable=daysConfig.find(x=>!x.is_holiday);
+  selectedDate=firstAvailable?firstAvailable.date:'';
+  days.innerHTML=daysConfig.map((x)=>`<div class="chip ${x.date===selectedDate?'active':''} ${x.is_holiday?'holiday':''}" data-date="${x.date}">${x.day_name_ar} (${x.date})${x.is_holiday?` - عطلة رسمية${x.holiday_name?` (${x.holiday_name})`:''}`:''}</div>`).join('');
+  document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{
+    const row=daysConfig.find(x=>x.date===el.dataset.date);
+    if(row?.is_holiday){
+      showToast('هذا اليوم عطلة رسمية ولا يمكن الحجز فيه',false);
+      msg.style.color='#b00020';
+      msg.textContent=`${row.holiday_name?row.holiday_name+' - ':''}هذا اليوم عطلة رسمية`;
+      return;
+    }
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active');
+    selectedDate=el.dataset.date;
+    clearMsg();
+    loadSlots();
+  });
+  await loadSlots();
+}
+async function loadSlots(){
+  selectedSlot='';
+  if(!selectedDate){slots.innerHTML='<div class="muted">لا يوجد أيام متاحة للحجز حالياً</div>';return;}
+  const selected=daysConfig.find(x=>x.date===selectedDate);
+  if(selected?.is_holiday){
+    slots.innerHTML='<div class="muted" style="color:#b00020;font-weight:800">هذا اليوم عطلة رسمية (محجوز)</div>';
+    return;
+  }
+  const s=await j(`/api/slots?branch_id=${branch.value}&booking_date=${encodeURIComponent(selectedDate)}`,{},true);
+  slots.innerHTML=(s.slots||[]).map(x=>`<div class="slot ${x.available?'':'na'}" data-time="${x.time}"><span>⏱</span><span>${x.time} - ${x.to_time}${x.available?'':` (ممتلئة)`}</span></div>`).join('');
+  document.querySelectorAll('.slot:not(.na)').forEach(el=>el.onclick=()=>{document.querySelectorAll('.slot').forEach(a=>a.classList.remove('sel'));el.classList.add('sel');selectedSlot=el.dataset.time;});
+}
 branch.onchange=loadDays;
 document.getElementById('transfer').addEventListener('input',e=>{e.target.value=sanitizeTransfer(e.target.value);clearMsg();});
 document.getElementById('phone').addEventListener('input',e=>{e.target.value=sanitizePhone(e.target.value);clearMsg();});
