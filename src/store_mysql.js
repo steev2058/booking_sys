@@ -13,7 +13,8 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'booking_sys',
   waitForConnections: true,
   connectionLimit: 10,
-  connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 7000)
+  connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 7000),
+  dateStrings: true
 });
 
 async function q(sql, values = []) {
@@ -33,9 +34,9 @@ function normalizeYmd(v) {
   if (!v) return null;
   if (typeof v === 'string') return v.slice(0, 10);
   if (v instanceof Date) {
-    const y = v.getUTCFullYear();
-    const m = String(v.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(v.getUTCDate()).padStart(2, '0');
+    const y = v.getFullYear();
+    const m = String(v.getMonth() + 1).padStart(2, '0');
+    const d = String(v.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
   }
   return String(v).slice(0, 10);
@@ -212,7 +213,8 @@ async function getCooldownData() {
     user: process.env.DB_USER || 'booking_user',
     password: process.env.DB_PASS || 'booking_pass',
     database: process.env.DB_NAME || 'booking_sys',
-    connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 7000)
+    connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS || 7000),
+    dateStrings: true
   });
   try {
     const [appointments] = await conn.query({ sql: 'SELECT phone, booking_date, status FROM appointments', timeout: Number(process.env.DB_QUERY_TIMEOUT_MS || 7000) });
