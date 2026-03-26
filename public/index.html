@@ -35,8 +35,9 @@
     .day-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
     .chip{padding:9px 14px;border:2px solid #b0bec5;border-radius:12px;background:#fff;cursor:pointer;font-weight:800;color:#546e7a}
     .chip.active{background:var(--gray);border-color:var(--gray);color:#fff}
-    .chip.holiday{background:#fff3e0;border-color:#ffb74d;color:#bf360c;cursor:not-allowed}
-    .chip.holiday.active{background:#ffe0b2;border-color:#ff9800;color:#bf360c}
+    .chip.holiday{background:#ffebee;border-color:#e53935;color:#b71c1c;cursor:not-allowed;position:relative}
+    .chip.holiday::before{content:'🔒';margin-left:6px}
+    .chip.holiday.active{background:#ffcdd2;border-color:#c62828;color:#b71c1c}
 
     .slots{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:10px;margin-top:10px}
     .slot{padding:13px;border-radius:12px;border:2px solid #cfd8dc;background:#fff;cursor:pointer;font-weight:800;display:flex;justify-content:space-between}
@@ -254,7 +255,7 @@ async function loadDays(){
   selectedDate='';
   const firstAvailable=daysConfig.find(x=>!x.is_holiday);
   selectedDate=firstAvailable?firstAvailable.date:'';
-  days.innerHTML=daysConfig.map((x)=>`<div class="chip ${x.date===selectedDate?'active':''} ${x.is_holiday?'holiday':''}" data-date="${x.date}">${x.day_name_ar} (${x.date})${x.is_holiday?` - عطلة رسمية${x.holiday_name?` (${x.holiday_name})`:''}`:''}</div>`).join('');
+  days.innerHTML=daysConfig.map((x)=>`<div class="chip ${x.date===selectedDate?'active':''} ${x.is_holiday?'holiday':''}" data-date="${x.date}">${x.day_name_ar} (${x.date})${x.is_holiday?` - يوم عطلة (محجوز)${x.holiday_name?` (${x.holiday_name})`:''}`:''}</div>`).join('');
   document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{
     const row=daysConfig.find(x=>x.date===el.dataset.date);
     if(row?.is_holiday){
