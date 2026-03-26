@@ -678,7 +678,7 @@ app.post('/api/send-otp', async (req, res) => {
   const { phone, full_name, transfer_number, captcha_answer, captcha_token } = req.body || {};
   if (!phone || !full_name || !transfer_number || !captcha_answer || !captcha_token) return res.status(400).json({ error: 'Missing fields' });
   if (!isValidPhone(phone)) return res.status(400).json({ error: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
-  if (!isValidTransferNumber(transfer_number)) return res.status(400).json({ error: 'رقم الحوالة يجب أن يحتوي أحرف وأرقام إنكليزية فقط' });
+  if (!isValidTransferNumber(transfer_number)) return res.status(400).json({ error: 'رقم الحوالة يقبل فقط أرقام وأحرف إنكليزية' });
   if (!isValidFullName(full_name)) return res.status(400).json({ error: 'الاسم يجب أن يحتوي على محارف فقط بدون أرقام' });
 
   const data = await read();
@@ -713,7 +713,7 @@ app.post('/api/book', async (req, res) => {
   const { transfer_number, branch_id, company_id, booking_date, slot_time, phone, full_name, otp_code } = req.body || {};
   if (!transfer_number || !branch_id || !company_id || !booking_date || !slot_time || !phone || !full_name || !otp_code) return res.status(400).json({ error: 'Missing required fields' });
   if (!isValidPhone(phone)) return res.status(400).json({ success: false, message: 'رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام' });
-  if (!isValidTransferNumber(transfer_number)) return res.status(400).json({ success: false, message: 'رقم الحوالة يجب أن يحتوي أحرف وأرقام إنكليزية فقط' });
+  if (!isValidTransferNumber(transfer_number)) return res.status(400).json({ success: false, message: 'رقم الحوالة يقبل فقط أرقام وأحرف إنكليزية' });
   if (!isValidFullName(full_name)) return res.status(400).json({ success: false, message: 'الاسم يجب أن يحتوي على محارف فقط بدون أرقام' });
 
   const data = await read();

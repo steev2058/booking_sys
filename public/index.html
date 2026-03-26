@@ -122,7 +122,7 @@
         </div>
 
         <div class="actions">
-          <button id="verifyBtn" onclick="verifyCaptchaAndSendOtp()">تأكيد والتحقق من الكابتشا</button>
+          <button id="verifyBtn" onclick="verifyCaptchaAndSendOtp()">تأكيد والتحقق</button>
           <button class="alt" onclick="nextStep(2)">رجوع</button>
         </div>
       </div>
@@ -205,7 +205,7 @@ function setBookingEnabled(enabled){
     clearMsg();
   }
 }
-function nextStep(n){if(!bookingEnabled){showToast('الحجز متوقف حالياً لعدم توفر شركات حوالات',false);return;}const transferVal=String(document.getElementById('transfer').value||'').trim();const phoneVal=String(document.getElementById('phone').value||'').trim();const fullNameVal=String(document.getElementById('full_name').value||'').trim();if(n===2&&(!transferVal||!phoneVal||!fullNameVal)){msg.style.color='#b00020';msg.textContent='يرجى تعبئة رقم الحوالة والموبايل والاسم الثلاثي';showToast('يرجى تعبئة رقم الحوالة والموبايل والاسم الثلاثي',false);return;}if(n===2&&!isValidTransfer(transferVal)){msg.style.color='#b00020';msg.textContent='رقم الحوالة يقبل أحرف وأرقام إنكليزية فقط';showToast('رقم الحوالة يقبل أحرف وأرقام إنكليزية فقط',false);return;}if(n===2&&!/^09\d{8}$/.test(phoneVal)){msg.style.color='#b00020';msg.textContent='رقم الموبايل يجب أن يبدأ بـ 09 ويتكون من 10 أرقام';showToast('رقم الموبايل يجب أن يبدأ بـ 09 ويتكون من 10 أرقام',false);return;}if(n===2&&!isValidName(fullNameVal)){msg.style.color='#b00020';msg.textContent='الاسم يجب أن يحتوي محارف فقط بدون أرقام';showToast('الاسم يجب أن يحتوي محارف فقط بدون أرقام',false);return;}if(n===3&&!selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';showToast('الرجاء اختيار وقت متاح',false);return;}clearMsg();step=n;setStep();}
+function nextStep(n){if(!bookingEnabled){showToast('الحجز متوقف حالياً لعدم توفر شركات حوالات',false);return;}const transferVal=String(document.getElementById('transfer').value||'').trim();const phoneVal=String(document.getElementById('phone').value||'').trim();const fullNameVal=String(document.getElementById('full_name').value||'').trim();if(n===2&&(!transferVal||!phoneVal||!fullNameVal)){msg.style.color='#b00020';msg.textContent='يرجى تعبئة رقم الحوالة والموبايل والاسم الثلاثي';showToast('يرجى تعبئة رقم الحوالة والموبايل والاسم الثلاثي',false);return;}if(n===2&&!isValidTransfer(transferVal)){msg.style.color='#b00020';msg.textContent='رقم الحوالة يقبل فقط أرقام وأحرف إنكليزية';showToast('رقم الحوالة يقبل فقط أرقام وأحرف إنكليزية',false);return;}if(n===2&&!/^09\d{8}$/.test(phoneVal)){msg.style.color='#b00020';msg.textContent='رقم الموبايل يجب أن يبدأ بـ 09 ويتكون من 10 أرقام';showToast('رقم الموبايل يجب أن يبدأ بـ 09 ويتكون من 10 أرقام',false);return;}if(n===2&&!isValidName(fullNameVal)){msg.style.color='#b00020';msg.textContent='الاسم يجب أن يحتوي محارف فقط بدون أرقام';showToast('الاسم يجب أن يحتوي محارف فقط بدون أرقام',false);return;}if(n===3&&!selectedSlot){msg.style.color='#b00020';msg.textContent='الرجاء اختيار وقت متاح';showToast('الرجاء اختيار وقت متاح',false);return;}clearMsg();step=n;setStep();}
 let loadCount=0;
 function setLoading(on){
   loadCount=Math.max(0, loadCount + (on?1:-1));
@@ -285,7 +285,7 @@ async function loadSlots(){
   document.querySelectorAll('.slot:not(.na)').forEach(el=>el.onclick=()=>{document.querySelectorAll('.slot').forEach(a=>a.classList.remove('sel'));el.classList.add('sel');selectedSlot=el.dataset.time;});
 }
 branch.onchange=loadDays;
-document.getElementById('transfer').addEventListener('input',e=>{e.target.value=sanitizeTransfer(e.target.value);clearMsg();});
+document.getElementById('transfer').addEventListener('input',e=>{const raw=String(e.target.value||'');const cleaned=sanitizeTransfer(raw);if(raw!==cleaned){msg.style.color='#b00020';msg.textContent='رقم الحوالة يقبل فقط أرقام وأحرف إنكليزية';showToast('رقم الحوالة يقبل فقط أرقام وأحرف إنكليزية',false);}else{clearMsg();}e.target.value=cleaned;});
 document.getElementById('phone').addEventListener('input',e=>{e.target.value=sanitizePhone(e.target.value);clearMsg();});
 document.getElementById('phone').addEventListener('keydown',e=>{if(['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'].includes(e.key))return;if(!/\d/.test(e.key))e.preventDefault();if((e.target.selectionStart||0)<2)e.preventDefault();});
 document.getElementById('full_name').addEventListener('input',e=>{e.target.value=sanitizeName(e.target.value);clearMsg();});
@@ -315,7 +315,7 @@ async function verifyCaptchaAndSendOtp(){
   const phoneVal=String(document.getElementById('phone').value||'').trim();
   const transferVal=String(document.getElementById('transfer').value||'').trim();
   const fullNameVal=String(document.getElementById('full_name').value||'').trim();
-  if(!isValidTransfer(transferVal)){showToast('رقم الحوالة يقبل أحرف وأرقام إنكليزية فقط',false);msg.style.color='#b00020';msg.textContent='رقم الحوالة يقبل أحرف وأرقام إنكليزية فقط';return;}
+  if(!isValidTransfer(transferVal)){showToast('رقم الحوالة يقبل فقط أرقام وأحرف إنكليزية',false);msg.style.color='#b00020';msg.textContent='رقم الحوالة يقبل فقط أرقام وأحرف إنكليزية';return;}
   if(!/^09\d{8}$/.test(phoneVal)){showToast('رقم الموبايل يجب أن يبدأ بـ 09 ويتكون من 10 أرقام',false);msg.style.color='#b00020';msg.textContent='رقم الموبايل يجب أن يبدأ بـ 09 ويتكون من 10 أرقام';return;}
   if(!isValidName(fullNameVal)){showToast('الاسم يجب أن يحتوي محارف فقط بدون أرقام',false);msg.style.color='#b00020';msg.textContent='الاسم يجب أن يحتوي محارف فقط بدون أرقام';return;}
   const btn=verifyActionBtn||window.verifyBtn;
