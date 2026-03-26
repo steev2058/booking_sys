@@ -411,7 +411,8 @@ function resetVerifyFail(data, phone) {
 }
 
 function ensureDefaultBusinessDays(data, branchId) {
-  const defaults = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+  // Seed only missing records for new branches; do NOT overwrite admin-configured schedule.
+  const defaults = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
   for (const day of defaults) {
     const exists = data.business_days.find(d => Number(d.branch_id) === Number(branchId) && d.day_name === day);
     if (!exists) {
@@ -420,19 +421,11 @@ function ensureDefaultBusinessDays(data, branchId) {
         branch_id: Number(branchId),
         day_name: day,
         start_time: '10:00',
-        end_time: '14:00',
+        end_time: '15:30',
         interval_minutes: 30,
         active: 1
       });
-    } else {
-      exists.start_time = '10:00';
-      exists.end_time = '14:00';
-      exists.interval_minutes = 30;
-      exists.active = 1;
     }
-  }
-  for (const row of data.business_days.filter(d => Number(d.branch_id) === Number(branchId) && d.day_name === 'Friday')) {
-    row.active = 0;
   }
 }
 
