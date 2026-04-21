@@ -525,15 +525,50 @@ async function generateDailyReportsIfNeeded(dateYmd = ymd(new Date())) {
 }
 
 
+function normalizeSmsPhoneForMTN(phone) {
+  const p = String(phone || '').replace(/\D/g, '');
+  if (/^09\d{8}$/.test(p)) {
+    return `963${p.slice(1)}`;
+  }
+  return p;
+}
+
+function stringToUtf16Hex(str) {
+  return Array.from(str)
+    .map(ch => ch.charCodeAt(0).toString(16).padStart(4, '0'))
+    .join('');
+}
+
 async function sendSmsRaw(phone, msg) {
-  const qs = new URLSearchParams({ User: SMS_USER, Pass: SMS_PASS, From: SMS_FROM, Gsm: phone, Msg: msg, Lang: '0' });
+  const normalizedPhone = normalizeSmsPhoneForMTN(phone);
+  const encodedMsg = stringToUtf16Hex(msg);
+  const qs = new URLSearchParams({
+    User: SMS_USER,
+    Pass: SMS_PASS,
+    From: SMS_FROM,
+    Gsm: normalizedPhone,
+    Msg: encodedMsg,
+    Lang: '0'
+  });
   const url = `${SMS_ENDPOINT}?${qs.toString()}`;
+
+  console.log('[SMS][REQ]', { phone, normalizedPhone, msg, encodedMsg, url });
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const r = await fetch(url, { method: 'GET', signal: controller.signal });
     const text = await r.text();
-    return { ok: r.ok, text: (text || '').slice(0, 500) };
+    console.log('[SMS][STATUS]', r.status);
+    console.log('[SMS][BODY]', text);
+    return {
+      ok: r.ok && !/error|failed|invalid|denied|reject|رفض|خطأ/i.test(text),
+      status: r.status,
+      text: (text || '').slice(0, 1000)
+    };
+  } catch (e) {
+    console.error('[SMS][ERROR]', e);
+    return { ok: false, status: 0, text: String(e.message || e) };
   } finally {
     clearTimeout(timeout);
   }
@@ -697,10 +732,14 @@ app.post('/api/send-otp', async (req, res) => {
 
   try {
     const sms = await sendSmsOtp(phone, code);
-    if (!sms.ok) return res.status(502).json({ error: 'SMS provider error', details: sms.text });
-    return res.json({ ok: true, message: 'تم إرسال رمز التحقق بنجاح' });
-  } catch {
-    return res.status(502).json({ error: 'SMS send failed' });
+    console.log('[SEND OTP][SMS RESULT]', sms);
+    if (!sms.ok) {
+      return res.status(502).json({ ok: false, error: 'SMS provider error', details: sms.text });
+    }
+    return res.json({ ok: true, message: 'تم إرسال رمز التحقق بنجاح', provider_response: sms.text });
+  } catch (e) {
+    console.error('[SEND OTP][EXCEPTION]', e);
+    return res.status(502).json({ ok: false, error: 'SMS send failed', details: String(e.message || e) });
   }
 });
 
@@ -768,7 +807,8 @@ app.post('/api/book', async (req, res) => {
 
   const branch = data.branches.find(b => Number(b.id) === Number(branch_id));
   const smsMessage = `السيد ${cleanName} تم حجز دور لمراجعة فرع ${branch?.name || ''} لاستلام حوالة ${transfer_number} من الساعة ${slot_time} إلى الساعة ${calcSlotEnd(slot_time, Number(dayCfg.interval_minutes || 30))} بتاريخ ${booking_date}.`;
-  sendSmsRaw(phone, smsMessage).catch(() => {});
+  const bookingSms = await sendSmsRaw(phone, smsMessage);
+  console.log('[BOOK][SMS RESULT]', bookingSms);
 
   return res.json({ success: true, message: 'تم حجز الموعد بنجاح' });
 });
