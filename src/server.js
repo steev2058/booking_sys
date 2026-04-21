@@ -328,7 +328,9 @@ async function sendReportEmail({ to, dateYmd, rows, dashboardUrl }) {
 async function sendDailyReportsEmailsIfNeeded(data, dateYmd = ymd(new Date())) {
   const users = data.dashboard_users || [];
   const allRecipients = new Set(REPORT_ADMIN_EMAILS);
+
   for (const u of users) {
+    if (Number(u.active ?? 1) !== 1) continue;
     if (['admin', 'manager', 'branch_employee', 'employee'].includes(normalizeRole(u.role)) && u.report_email) {
       allRecipients.add(normalizeEmail(u.report_email));
     }
@@ -348,7 +350,6 @@ async function sendDailyReportsEmailsIfNeeded(data, dateYmd = ymd(new Date())) {
     if (data.report_email_logs.some(x => x.key === dedupeKey)) continue;
 
     const rows = reportRowsForDate(data, dateYmd, scopedBranchId);
-    if (!rows.length) continue;
 
     try {
       await sendReportEmail({ to: email, dateYmd, rows, dashboardUrl });
@@ -358,6 +359,7 @@ async function sendDailyReportsEmailsIfNeeded(data, dateYmd = ymd(new Date())) {
       console.error('[REPORT_EMAIL_ERROR]', email, e.message || e);
     }
   }
+
   return sentAny;
 }
 
